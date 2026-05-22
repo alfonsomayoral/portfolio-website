@@ -1,0 +1,1 @@
+import{a as t,E as a}from"./GlobalApp.vK8XqYB9.js";import"./index.Brfk6Bdo.js";import"./ScrollTrigger.6qCihK2t.js";import"./router.B-sij-_X.js";import"./visitedNews.BmN7K1ri.js";const o=document.querySelector("#canvas-wrapper"),r=o.querySelector("canvas");await t.init(o,r);t.state.emit(a.ATTACH);t.state.emit(a.RESIZE,t.tools?.viewport.infos);
