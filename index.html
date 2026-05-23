@@ -55,7 +55,7 @@
     <div class="dk:col-start-4 dk:col-end-22 lg:col-start-5 lg:col-end-21 tb:col-start-1 tb:col-end-5">
       <div class="wid-heading-sticky" style="position:sticky;top:120px;z-index:6;padding-top:6px;padding-bottom:36px;">
         <p style="font-size:18px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#2D628C;opacity:0.7;margin:0 0 18px 0;font-family:'Josefin Sans','Century Gothic',sans-serif;">What I do</p>
-        <h2 data-animation="Title" class="fs-h1 uppercase" data-astro-cid-zdjhxtfb style="margin:0 0 18px 0;line-height:1;font-size:64px;font-weight:300;letter-spacing:-0.5px;font-family:'Josefin Sans','Century Gothic',sans-serif;color:#2D628C;">Four areas of focus.</h2>
+        <h2 class="fs-h1 uppercase" data-astro-cid-zdjhxtfb style="margin:0 0 18px 0;line-height:1;font-size:64px;font-weight:300;letter-spacing:-0.5px;font-family:'Josefin Sans','Century Gothic',sans-serif;color:#2D628C;">Four areas of focus.</h2>
         <p style="font-size:21px;font-weight:300;font-style:italic;color:#2D628C;opacity:0.78;margin:0;font-family:'Josefin Sans','Century Gothic',sans-serif;max-width:880px;line-height:1.5;">Tech and non-tech blended together. I work across AI engineering, full-stack development, cloud infrastructure and community &mdash; because shipping real products needs all four.</p>
       </div>
       <div class="wid-stack-card" style="position:sticky;top:340px;width:100%;margin-bottom:46vh;background:rgba(255,255,255,0.10);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(255,255,255,0.32);border-radius:20px;padding:44px 52px;box-shadow:0 16px 48px rgba(45,98,140,0.18), inset 0 1px 0 rgba(255,255,255,0.35);font-family:'Josefin Sans','Century Gothic',sans-serif;color:#1a3a52;">
@@ -152,8 +152,8 @@
       const totalScroll = rect.height - window.innerHeight;
       const progress = totalScroll > 0 ? Math.max(0, Math.min(1, -rect.top / totalScroll)) : 0;
       let r = 45, g = 98, b = 140;
-      if (progress > 0.20) {
-        const t = Math.min(1, (progress - 0.20) / 0.50);
+      if (progress > 0.55) {
+        const t = Math.min(1, (progress - 0.55) / 0.20);
         r = lerp(45, 255, t); g = lerp(98, 255, t); b = lerp(140, 255, t);
       }
       const color = `rgb(${r}, ${g}, ${b})`;
