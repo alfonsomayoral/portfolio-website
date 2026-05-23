@@ -6,45 +6,115 @@
 		opacity: 0;
 	}
 </style>  <section class="astro-va4abrey" data-chapter="WhoWeAre" id="WhoWeAre" data-label="About me" data-astro-cid-va4abrey> <div class="grid" data-astro-cid-va4abrey> <h2 data-animation="Title" class="fs-h2 uppercase tb:col-end-4 dk:col-start-10 dk:col-end-23 lg:col-start-14" data-astro-cid-va4abrey> Hi, I&rsquo;m Alfonso. I build things &mdash; products, communities, and a path through engineering. </h2> <div class="text-block dk:col-start-5 dk:col-end-13 lg:col-start-7" data-astro-cid-tbw6esjt> <div class="content fs-s1 montfort-navy-blue" data-astro-cid-tbw6esjt> <div class="content fs-s1 montfort-navy-blue" data-animation="TextBlock" data-astro-cid-tbw6esjt> <p>From Madrid, sharpened with a year in California. I ship enterprise AI at Suntory by day, and build my own stuff by night &mdash; <em>Spotter AI</em> (mobile fitness app, 1,000+ downloads) and <em>AISC Madrid</em> (first European chapter of the AI Student Collective). I&rsquo;m good at moving fast across AI, full-stack and cloud, but what I really love is the messy human side of building: getting people aligned, deciding with incomplete information, and learning out loud.</p> </div> </div> <div data-animation="FadeIn" data-astro-cid-chamlvsj="true" style="display:flex;align-items:center;gap:18px;margin-top:32px;"> <img src="/assets/images/alfonso.png" alt="Alfonso Mayoral" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:1.5px solid #2D628C;flex-shrink:0;"/> <div style="font-family:'Josefin Sans',sans-serif;color:#2D628C;"> <div style="font-size:15px;font-weight:500;letter-spacing:1px;">Alfonso Mayoral</div> <div style="font-size:12px;opacity:0.7;letter-spacing:0.5px;margin-top:2px;">Madrid, Spain</div> </div> </div> </div> </div> </section>  <section class="astro-zdjhxtfb" data-chapter="WhatWeDo" id="WhatWeDo" data-label="What I do" data-astro-cid-zdjhxtfb>
+  <style>
+    .wid-col { opacity: 0; transform: translateY(40px); transition: opacity 0.7s ease-out, transform 0.7s ease-out; }
+    .wid-col.wid-visible { opacity: 1; transform: translateY(0); }
+    @media (max-width: 900px) {
+      .wid-columns-grid { grid-template-columns: 1fr 1fr !important; }
+      .wid-stage { height: auto !important; }
+      .wid-sticky { position: static !important; height: auto !important; padding: 60px 0; }
+    }
+  </style>
   <div class="grid" data-astro-cid-zdjhxtfb>
     <h2 data-animation="Title" class="fs-h2 uppercase tb:col-end-4 dk:col-start-5 dk:col-end-19 lg:col-start-7 lg:col-end-17" data-astro-cid-zdjhxtfb>What I do.</h2>
-    <p class="fs-s1 dk:col-start-5 dk:col-end-19 lg:col-start-7 lg:col-end-17" data-animation="FadeIn" data-astro-cid-zdjhxtfb style="margin-top:18px;">Four areas, tech and non-tech blended &mdash; because shipping requires both.</p>
+    <p class="fs-s1 dk:col-start-5 dk:col-end-19 lg:col-start-7 lg:col-end-17" data-animation="FadeIn" data-astro-cid-zdjhxtfb style="margin-top:18px;color:#2D628C;">Four areas, tech and non-tech blended &mdash; because shipping requires both.</p>
   </div>
-  <div class="grid" style="margin-top:60px;padding-bottom:30px;">
-    <div class="dk:col-start-5 dk:col-end-21 lg:col-start-7 lg:col-end-19 tb:col-start-1 tb:col-end-5" style="display:grid;grid-template-columns:repeat(4,1fr);gap:36px;">
-      <div style="color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;padding-right:20px;">
-      <h3 style="font-size:22px;font-weight:500;letter-spacing:1px;margin:0 0 14px 0;text-transform:uppercase;">AI & Agentic Systems</h3>
-      <p style="font-size:15px;font-weight:300;line-height:1.6;opacity:0.85;margin:0;">Building enterprise AI with MCP servers, FastMCP, RAG, the OpenAI Agents SDK and ChatGPT Enterprise integrations. Production-grade, multi-tenant, and used by 200+ commercial users every day.</p>
-    </div><div style="color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;padding-right:20px;">
-      <h3 style="font-size:22px;font-weight:500;letter-spacing:1px;margin:0 0 14px 0;text-transform:uppercase;">Full-Stack & Mobile</h3>
-      <p style="font-size:15px;font-weight:300;line-height:1.6;opacity:0.85;margin:0;">Shipping products end to end with TypeScript, React Native + Expo, Node.js and React. From zero to App Store and Play Store with monetisation, auth and analytics in place.</p>
-    </div><div style="color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;padding-right:20px;">
-      <h3 style="font-size:22px;font-weight:500;letter-spacing:1px;margin:0 0 14px 0;text-transform:uppercase;">Cloud & DevOps</h3>
-      <p style="font-size:15px;font-weight:300;line-height:1.6;opacity:0.85;margin:0;">Designing and deploying on Microsoft Azure: AKS, Kubernetes, Docker, Azure SQL, Azure DevOps and GitHub Actions. CI/CD that gets things to production reliably, not just locally.</p>
-    </div><div style="color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;padding-right:20px;">
-      <h3 style="font-size:22px;font-weight:500;letter-spacing:1px;margin:0 0 14px 0;text-transform:uppercase;">Builder & Community</h3>
-      <p style="font-size:15px;font-weight:300;line-height:1.6;opacity:0.85;margin:0;">Founder of Spotter AI. Co-founder and vice-president of AISC Madrid, the first European chapter of the AI Student Collective. I love getting people building together.</p>
+
+  <!-- Sticky scroll-jacked stage -->
+  <div class="wid-stage" style="position:relative;height:180vh;margin-top:60px;">
+    <div class="wid-sticky" style="position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;">
+      <div class="grid" style="width:100%;">
+        <div class="dk:col-start-4 dk:col-end-22 lg:col-start-6 lg:col-end-20 tb:col-start-1 tb:col-end-5">
+          <div class="wid-columns-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px;">
+            <div class="wid-col" style="background:rgba(255,255,255,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:32px 28px;border-radius:6px;border:1px solid rgba(45,98,140,0.12);box-shadow:0 8px 24px rgba(45,98,140,0.08);">
+      <h3 style="font-size:22px;font-weight:500;letter-spacing:1px;margin:0 0 16px 0;text-transform:uppercase;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;">AI & Agentic Systems</h3>
+      <p style="font-size:15px;font-weight:300;line-height:1.6;color:#2D628C;opacity:0.95;margin:0;font-family:'Josefin Sans','Century Gothic',sans-serif;">Building enterprise AI with MCP servers, FastMCP, RAG, the OpenAI Agents SDK and ChatGPT Enterprise integrations. Production-grade, multi-tenant, used by 200+ commercial users every day.</p>
+    </div><div class="wid-col" style="background:rgba(255,255,255,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:32px 28px;border-radius:6px;border:1px solid rgba(45,98,140,0.12);box-shadow:0 8px 24px rgba(45,98,140,0.08);">
+      <h3 style="font-size:22px;font-weight:500;letter-spacing:1px;margin:0 0 16px 0;text-transform:uppercase;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;">Full-Stack & Mobile</h3>
+      <p style="font-size:15px;font-weight:300;line-height:1.6;color:#2D628C;opacity:0.95;margin:0;font-family:'Josefin Sans','Century Gothic',sans-serif;">Shipping products end to end with TypeScript, React Native + Expo, Node.js and React. From zero to App Store and Play Store with monetisation, auth and analytics in place.</p>
+    </div><div class="wid-col" style="background:rgba(255,255,255,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:32px 28px;border-radius:6px;border:1px solid rgba(45,98,140,0.12);box-shadow:0 8px 24px rgba(45,98,140,0.08);">
+      <h3 style="font-size:22px;font-weight:500;letter-spacing:1px;margin:0 0 16px 0;text-transform:uppercase;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;">Cloud & DevOps</h3>
+      <p style="font-size:15px;font-weight:300;line-height:1.6;color:#2D628C;opacity:0.95;margin:0;font-family:'Josefin Sans','Century Gothic',sans-serif;">Designing and deploying on Microsoft Azure: AKS, Kubernetes, Docker, Azure SQL, Azure DevOps and GitHub Actions. CI/CD that gets things to production reliably, not just locally.</p>
+    </div><div class="wid-col" style="background:rgba(255,255,255,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:32px 28px;border-radius:6px;border:1px solid rgba(45,98,140,0.12);box-shadow:0 8px 24px rgba(45,98,140,0.08);">
+      <h3 style="font-size:22px;font-weight:500;letter-spacing:1px;margin:0 0 16px 0;text-transform:uppercase;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;">Builder & Community</h3>
+      <p style="font-size:15px;font-weight:300;line-height:1.6;color:#2D628C;opacity:0.95;margin:0;font-family:'Josefin Sans','Century Gothic',sans-serif;">Founder of Spotter AI. Co-founder and vice-president of AISC Madrid, the first European chapter of the AI Student Collective. I love getting people building together.</p>
     </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="grid" style="margin-top:60px;">
-    <p class="fs-s1 dk:col-start-5 dk:col-end-21 lg:col-start-7 lg:col-end-19" data-animation="FadeIn" style="font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#2D628C;opacity:0.6;margin:0 0 18px 0;">Explore the rest</p>
-    <div class="dk:col-start-5 dk:col-end-21 lg:col-start-7 lg:col-end-19 tb:col-start-1 tb:col-end-5" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
-      <a href="/trading/" data-animation="FadeIn" style="display:block;padding:28px 24px;border:1px solid rgba(45,98,140,0.25);border-radius:6px;text-decoration:none;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;background:rgba(255,255,255,0.55);transition:border-color 0.2s;">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2D628C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;opacity:0.85;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-      <div style="font-size:11px;font-weight:600;letter-spacing:3px;opacity:0.6;text-transform:uppercase;margin-bottom:6px;">01 · Where I have worked</div>
-      <div style="font-size:20px;font-weight:500;letter-spacing:1px;text-transform:uppercase;">Work Experience &rarr;</div>
-    </a><a href="/capital/" data-animation="FadeIn" style="display:block;padding:28px 24px;border:1px solid rgba(45,98,140,0.25);border-radius:6px;text-decoration:none;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;background:rgba(255,255,255,0.55);transition:border-color 0.2s;">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2D628C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;opacity:0.85;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-      <div style="font-size:11px;font-weight:600;letter-spacing:3px;opacity:0.6;text-transform:uppercase;margin-bottom:6px;">02 · UC3M & UC Riverside</div>
-      <div style="font-size:20px;font-weight:500;letter-spacing:1px;text-transform:uppercase;">Education &rarr;</div>
-    </a><a href="/maritime/" data-animation="FadeIn" style="display:block;padding:28px 24px;border:1px solid rgba(45,98,140,0.25);border-radius:6px;text-decoration:none;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;background:rgba(255,255,255,0.55);transition:border-color 0.2s;">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2D628C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;opacity:0.85;"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      <div style="font-size:11px;font-weight:600;letter-spacing:3px;opacity:0.6;text-transform:uppercase;margin-bottom:6px;">03 · What I have built</div>
-      <div style="font-size:20px;font-weight:500;letter-spacing:1px;text-transform:uppercase;">Projects &rarr;</div>
+
+  <!-- Explore the rest — separate, vertical stack -->
+  <div class="grid" style="margin-top:120px;padding-bottom:40px;">
+    <div class="dk:col-start-5 dk:col-end-21 lg:col-start-7 lg:col-end-19 tb:col-start-1 tb:col-end-5">
+      <p style="font-size:12px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#2D628C;opacity:0.6;margin:0 0 32px 0;font-family:'Josefin Sans','Century Gothic',sans-serif;">Explore the rest</p>
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <a href="/trading/" class="explore-row" style="display:flex;align-items:center;gap:48px;padding:36px 40px;background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(45,98,140,0.15);border-radius:6px;text-decoration:none;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;transition:transform 0.3s ease, box-shadow 0.3s ease;box-shadow:0 4px 16px rgba(45,98,140,0.06);" onmouseover="this.style.transform='translateX(8px)';this.style.boxShadow='0 12px 32px rgba(45,98,140,0.18)';" onmouseout="this.style.transform='translateX(0)';this.style.boxShadow='0 4px 16px rgba(45,98,140,0.06)';">
+      <div style="flex:0 0 80px;display:flex;align-items:center;justify-content:center;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2D628C" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.85;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      </div>
+      <div style="flex:1;">
+        <p style="font-size:12px;font-weight:700;letter-spacing:3px;opacity:0.6;text-transform:uppercase;margin:0 0 10px 0;">01 &middot; Where I have worked</p>
+        <h3 style="font-size:30px;font-weight:500;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px 0;line-height:1.15;">Work Experience</h3>
+        <p style="font-size:15px;font-weight:300;line-height:1.55;opacity:0.85;margin:0 0 14px 0;max-width:680px;">From SAP consulting at Campus S.W. to enterprise AI at Suntory Global Spirits. Six roles across consulting, mobile, community and AI engineering &mdash; the path that got me here.</p>
+        <span style="font-size:13px;font-weight:500;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #2D628C;padding-bottom:2px;">Visit this section &rarr;</span>
+      </div>
+    </a><a href="/capital/" class="explore-row" style="display:flex;align-items:center;gap:48px;padding:36px 40px;background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(45,98,140,0.15);border-radius:6px;text-decoration:none;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;transition:transform 0.3s ease, box-shadow 0.3s ease;box-shadow:0 4px 16px rgba(45,98,140,0.06);" onmouseover="this.style.transform='translateX(8px)';this.style.boxShadow='0 12px 32px rgba(45,98,140,0.18)';" onmouseout="this.style.transform='translateX(0)';this.style.boxShadow='0 4px 16px rgba(45,98,140,0.06)';">
+      <div style="flex:0 0 80px;display:flex;align-items:center;justify-content:center;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2D628C" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.85;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      </div>
+      <div style="flex:1;">
+        <p style="font-size:12px;font-weight:700;letter-spacing:3px;opacity:0.6;text-transform:uppercase;margin:0 0 10px 0;">02 &middot; UC3M & UC Riverside</p>
+        <h3 style="font-size:30px;font-weight:500;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px 0;line-height:1.15;">Education</h3>
+        <p style="font-size:15px;font-weight:300;line-height:1.55;opacity:0.85;margin:0 0 14px 0;max-width:680px;">Five years of Telecommunications Technology Engineering at UC3M with a top-of-class trajectory, plus an exchange year at UC Riverside on a perfect 4.0 GPA and the Chancellor&rsquo;s Honor List.</p>
+        <span style="font-size:13px;font-weight:500;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #2D628C;padding-bottom:2px;">Visit this section &rarr;</span>
+      </div>
+    </a><a href="/maritime/" class="explore-row" style="display:flex;align-items:center;gap:48px;padding:36px 40px;background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(45,98,140,0.15);border-radius:6px;text-decoration:none;color:#2D628C;font-family:'Josefin Sans','Century Gothic',sans-serif;transition:transform 0.3s ease, box-shadow 0.3s ease;box-shadow:0 4px 16px rgba(45,98,140,0.06);" onmouseover="this.style.transform='translateX(8px)';this.style.boxShadow='0 12px 32px rgba(45,98,140,0.18)';" onmouseout="this.style.transform='translateX(0)';this.style.boxShadow='0 4px 16px rgba(45,98,140,0.06)';">
+      <div style="flex:0 0 80px;display:flex;align-items:center;justify-content:center;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2D628C" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.85;"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      <div style="flex:1;">
+        <p style="font-size:12px;font-weight:700;letter-spacing:3px;opacity:0.6;text-transform:uppercase;margin:0 0 10px 0;">03 &middot; What I have built</p>
+        <h3 style="font-size:30px;font-weight:500;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px 0;line-height:1.15;">Projects</h3>
+        <p style="font-size:15px;font-weight:300;line-height:1.55;opacity:0.85;margin:0 0 14px 0;max-width:680px;">Six selected projects across mobile, AI infrastructure and competitive engineering &mdash; Spotter AI, the TFG computer-vision pipeline, the Suntory MCP connectors, and more.</p>
+        <span style="font-size:13px;font-weight:500;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #2D628C;padding-bottom:2px;">Visit this section &rarr;</span>
+      </div>
     </a>
+      </div>
     </div>
   </div>
+
+  <script>
+  (function() {
+    const stage = document.querySelector('.wid-stage');
+    const cols = document.querySelectorAll('.wid-col');
+    if (!stage || !cols.length) return;
+    let ticking = false;
+    function update() {
+      const rect = stage.getBoundingClientRect();
+      const viewport = window.innerHeight;
+      const total = rect.height - viewport;
+      const scrolled = Math.max(0, -rect.top);
+      const progress = total > 0 ? Math.min(1, scrolled / total) : 0;
+      cols.forEach((col, i) => {
+        const trigger = (i / cols.length) * 0.75 + 0.05;
+        if (progress >= trigger) col.classList.add('wid-visible');
+        else col.classList.remove('wid-visible');
+      });
+      ticking = false;
+    }
+    function onScroll() {
+      if (!ticking) {
+        requestAnimationFrame(update);
+        ticking = true;
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    update();
+  })();
+  </script>
 </section><section class="astro-5vnrzpll" data-chapter="GlobalConnectivity" id="GlobalConnectivity" data-label="Global connectivity" data-theme-chapters="dark" data-cursor="draggable" data-cursor-down="dragging" data-animation="GlobalConnectivity" data-astro-cid-5vnrzpll> <div class="grid" data-astro-cid-5vnrzpll> <h2 class="fs-h2 uppercase montfort-navy-blue-2 tb:col-end-4 dk:col-start-7 dk:col-end-22 lg:col-start-10" data-label="Global connectivity" data-astro-cid-5vnrzpll> Based in Madrid. Building global. </h2> </div><div class="grid" data-astro-cid-5vnrzpll style="margin-top:50px;position:relative;z-index:5;">
   <div class="dk:col-start-5 dk:col-end-21 lg:col-start-7 lg:col-end-19 tb:col-start-1 tb:col-end-5" style="color:#fff;font-family:'Josefin Sans','Century Gothic',sans-serif;">
     <p style="font-size:11px;font-weight:700;letter-spacing:4px;opacity:0.7;text-transform:uppercase;margin:0 0 22px 0;">Timeline</p>
