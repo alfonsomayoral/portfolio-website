@@ -92,8 +92,10 @@
     // (postprocessing skipped for stability)
 
     (function() {
+      console.log('NEURAL: IIFE started');
       const canvas = document.getElementById('neural-canvas');
       const section = document.querySelector('.we-cards-wrap');
+      console.log('NEURAL: canvas=', !!canvas, 'section=', !!section);
       if (!canvas || !section) return;
 
       const scene = new THREE.Scene();
@@ -270,6 +272,7 @@
         pMat.size = 3.2 + Math.sin(time * 1.5) * 0.4;
         renderer.render(scene, camera);
       }
+      console.log('NEURAL: starting animate loop');
       animate();
     })();
   </script>
