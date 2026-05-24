@@ -384,7 +384,10 @@
   // ---------- CAMERA STATIONS ----------
   // Each station owns a range of scrollProgress and a function (localP) → {pos, look}.
   // visit station orbits a hub; transit station lerps; approach/exit are linear.
-  const FAR_START = new THREE.Vector3(0, 8, 170);
+  // Closer FAR_START so the network is visible almost immediately when the
+  // user enters the neural section (was z:170 which made the approach phase
+  // feel empty for too long of the scroll).
+  const FAR_START = new THREE.Vector3(0, 6, 75);
 
   function orbitAroundHub(hubIdx, localP, side) {
     // side: +1 right, -1 left (controls orbit direction; alternated per hub)
@@ -561,8 +564,12 @@
       if (t > 0.05) document.body.style.backgroundColor = '#000814';
       else document.body.style.backgroundColor = '';
     }
+    // Activate the neural overlay as soon as the section's top reaches
+    // 60% of the viewport (was: only when section already filled half the
+    // viewport, which felt like the network appeared too late).
     const rect = section.getBoundingClientRect();
-    const inside = rect.top <= 1 && rect.bottom >= window.innerHeight * 0.5;
+    const vh = window.innerHeight;
+    const inside = rect.top <= vh * 0.6 && rect.bottom >= 0;
     document.body.classList.toggle('we-active', inside);
   }
   updateChrome();
