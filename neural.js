@@ -51,29 +51,37 @@
     camera.updateProjectionMatrix();
   };
 
-  // ---------- 5 hub waypoints, spread along Z ----------
-  const HUBS = [
-    { pos: new THREE.Vector3(  0,   0,    0), color: 0x6cd2ff },
-    { pos: new THREE.Vector3( 38,  -4,  -80), color: 0x7ad8ff },
-    { pos: new THREE.Vector3(-34,   8, -170), color: 0x5cc8ff },
-    { pos: new THREE.Vector3( 30,  12, -260), color: 0x8ae0ff },
-    { pos: new THREE.Vector3(-28,  -2, -350), color: 0x6cd2ff },
-  ];
+  // ---------- 5 hubs in symmetric pentagon layout ----------
+  // All hubs at radius PENTAGON_R from central z-axis, evenly spaced at 72°,
+  // all on the z=0 plane. Network has perfect rotational symmetry as a disk.
+  const PENTAGON_R = 30;
+  const HUB_COLORS = [0x6cd2ff, 0x7ad8ff, 0x5cc8ff, 0x8ae0ff, 0x6cd2ff];
+  const HUBS = [];
+  for (let i = 0; i < 5; i++) {
+    // Start at top (-Math.PI/2) and go clockwise
+    const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+    HUBS.push({
+      pos: new THREE.Vector3(Math.cos(angle) * PENTAGON_R, Math.sin(angle) * PENTAGON_R, 0),
+      color: HUB_COLORS[i],
+      angle, // store for camera personalities
+    });
+  }
 
-  // ---------- Ambient clusters between hubs (off-axis, leaving the line clean) ----------
+  // ---------- Ambient clusters distributed symmetrically inside the disk ----------
+  // Placed at varying radii inside the pentagon, with small z variance, so the
+  // overall shape stays a circular disk when viewed face-on.
   const AMBIENT = [];
-  for (let i = 0; i < HUBS.length - 1; i++) {
-    const a = HUBS[i].pos, b = HUBS[i + 1].pos;
-    for (let k = 0; k < 6; k++) {
-      const t = (k + 1) / 7;
-      const mid = a.clone().lerp(b, t);
-      const offDir = new THREE.Vector3(
-        (Math.random() < 0.5 ? -1 : 1) * (32 + Math.random() * 22),
-        (Math.random() - 0.5) * 28,
-        (Math.random() - 0.5) * 24
-      );
-      AMBIENT.push({ pos: mid.add(offDir), color: 0x3da8ff });
-    }
+  const NUM_AMBIENT = 22;
+  for (let i = 0; i < NUM_AMBIENT; i++) {
+    // distribute angles roughly evenly with jitter so it doesn't look rigid
+    const angle = (i / NUM_AMBIENT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+    // bias radius toward outer ring (sqrt for uniform area distribution)
+    const r = 6 + Math.sqrt(Math.random()) * (PENTAGON_R - 6 + 18);
+    const z = (Math.random() - 0.5) * 14;
+    AMBIENT.push({
+      pos: new THREE.Vector3(Math.cos(angle) * r, Math.sin(angle) * r, z),
+      color: 0x3da8ff,
+    });
   }
 
   const CLUSTERS = [
@@ -96,9 +104,13 @@
   // long-range cross-cluster connections in a second pass.
   const CLUSTER_PTS = [];
 
+  // PHASE 2 — collect bright nodes that should get a vertex-ring decoration
+  const VERTEX_NODES = []; // { pos, scale, color }
+
   for (const cl of CLUSTERS) {
-    const N = cl.isHub ? 1200 : 400;
-    const spread = cl.isHub ? 10 : 6.5;
+    // Tighter, denser clusters: smaller spread radius + more points
+    const N = cl.isHub ? 1800 : 500;
+    const spread = cl.isHub ? 6 : 4;
     const localPts = [];
     const color = new THREE.Color(cl.color);
 
@@ -114,7 +126,14 @@
       COL.push(c.r, c.g, c.b);
       const distNorm = Math.min(1, p.distanceTo(cl.pos) / spread);
       const baseS = cl.isHub ? 3.0 : 1.8;
-      SIZ.push(THREE.MathUtils.lerp(baseS, 0.3, distNorm * distNorm));
+      const s = THREE.MathUtils.lerp(baseS, 0.3, distNorm * distNorm);
+      SIZ.push(s);
+
+      // Vertex ring: ~15% of brightest nodes get a small ring around them
+      // — vertex-of-line look like the user requested
+      if (s > baseS * 0.55 && Math.random() < 0.15) {
+        VERTEX_NODES.push({ pos: p.clone(), scale: 0.7 + s * 0.45, color: cl.color });
+      }
     }
 
     // Denser plexus inside cluster (maxConn 8->14 hubs, 5->9 ambient)
@@ -202,17 +221,41 @@
     [0.50, 'rgba(60,150,240,0.15)'],
     [1.00, 'rgba(0,0,0,0)'],
   ]);
-  // Add cross flare on top
+  // Small, subtle cross flare confined to the middle 40% — user found
+  // the previous full-canvas cross too dominant. Only adds a tiny hint
+  // of lens-flare structure rather than a giant cross overlay.
   {
     const g = starBuilt.canvas.getContext('2d');
     g.globalCompositeOperation = 'lighter';
-    g.strokeStyle = 'rgba(230,245,255,0.65)';
-    g.lineWidth = 2;
-    g.beginPath(); g.moveTo(128, 0); g.lineTo(128, 256); g.stroke();
-    g.beginPath(); g.moveTo(0, 128); g.lineTo(256, 128); g.stroke();
+    g.strokeStyle = 'rgba(220,240,255,0.35)';
+    g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(128, 76);  g.lineTo(128, 180); g.stroke();
+    g.beginPath(); g.moveTo(76, 128); g.lineTo(180, 128); g.stroke();
     starBuilt.tex.needsUpdate = true;
   }
   const starSprite = starBuilt.tex;
+
+  // Vertex ring sprite — small hollow circle for the per-node ring overlay
+  const vertexRingSprite = (() => {
+    const size = 64;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    g.strokeStyle = 'rgba(200,235,255,0.85)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.arc(size / 2, size / 2, size * 0.32, 0, Math.PI * 2);
+    g.stroke();
+    // soft outer halo
+    g.strokeStyle = 'rgba(120,200,255,0.25)';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.arc(size / 2, size / 2, size * 0.34, 0, Math.PI * 2);
+    g.stroke();
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return tex;
+  })();
 
   // ---------- Build TWO point layers sharing the same geometry: sharp cores + wide halos ----------
   const pointsGeo = new THREE.BufferGeometry();
@@ -349,20 +392,48 @@
     })));
   }
 
-  // ---------- Scattered rings ----------
-  for (let i = 0; i < 22; i++) {
-    const r = 1.0 + Math.random() * 2.5;
-    const eg = new THREE.EdgesGeometry(new THREE.RingGeometry(r, r + 0.04, 40));
+  // ---------- Per-node vertex rings (~15% of brightest nodes) ----------
+  // Small hollow ring sprite at each VERTEX_NODE position so line joints
+  // read as explicit circular nodes — what the user requested.
+  for (const v of VERTEX_NODES) {
+    const m = new THREE.SpriteMaterial({
+      map: vertexRingSprite, color: v.color,
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+      opacity: 0.55 + Math.random() * 0.30,
+    });
+    const s = new THREE.Sprite(m);
+    s.position.copy(v.pos);
+    s.scale.setScalar(v.scale);
+    scene.add(s);
+  }
+
+  // ---------- Boundary rings: 3 concentric circles framing the disk ----------
+  // The whole network now lives inside this visible boundary, giving the
+  // "circle containing the neural net" feel the user wants.
+  [PENTAGON_R * 1.7, PENTAGON_R * 2.1, PENTAGON_R * 2.5].forEach((rad, idx) => {
+    const eg = new THREE.EdgesGeometry(new THREE.RingGeometry(rad - 0.15, rad + 0.15, 192));
     const ring = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({
-      color: 0x4dc0ff, transparent: true, opacity: 0.28,
+      color: 0x4dc0ff, transparent: true,
+      opacity: [0.28, 0.18, 0.10][idx],
       blending: THREE.AdditiveBlending, depthWrite: false,
     }));
-    const t = Math.random();
-    const i0 = Math.min(HUBS.length - 2, Math.floor(t * (HUBS.length - 1)));
-    const p0 = HUBS[i0].pos, p1 = HUBS[i0 + 1].pos;
-    ring.position.copy(p0.clone().lerp(p1, Math.random()).add(new THREE.Vector3(
-      (Math.random() - 0.5) * 70, (Math.random() - 0.5) * 28, (Math.random() - 0.5) * 34
-    )));
+    ring.rotation.x = Math.PI / 2 * 0; // lie flat in XY (z=0)
+    ring.position.z = 0;
+    scene.add(ring);
+  });
+
+  // ---------- Scattered small rings inside the disk (decorative) ----------
+  for (let i = 0; i < 26; i++) {
+    const r = 0.9 + Math.random() * 2.2;
+    const eg = new THREE.EdgesGeometry(new THREE.RingGeometry(r, r + 0.04, 36));
+    const ring = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({
+      color: 0x4dc0ff, transparent: true, opacity: 0.20 + Math.random() * 0.20,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    // Place inside the pentagon disk (radius up to PENTAGON_R * 1.6)
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.sqrt(Math.random()) * PENTAGON_R * 1.6;
+    ring.position.set(Math.cos(angle) * dist, Math.sin(angle) * dist, (Math.random() - 0.5) * 12);
     ring.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
     scene.add(ring);
   }
@@ -381,13 +452,15 @@
       opacity: 0.55 + Math.random() * 0.35, color: 0x9ad8ff,
     });
     const s = new THREE.Sprite(m);
-    const t = Math.random();
-    const i0 = Math.min(HUBS.length - 2, Math.floor(t * (HUBS.length - 1)));
-    const p0 = HUBS[i0].pos, p1 = HUBS[i0 + 1].pos;
-    s.position.copy(p0.clone().lerp(p1, Math.random()).add(new THREE.Vector3(
-      (Math.random() - 0.5) * 45, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 30 + 10,
-    )));
-    s.scale.setScalar(4 + Math.random() * 10);
+    // Distribute bokeh around the pentagon disk + slightly in front (z+)
+    const aBokeh = Math.random() * Math.PI * 2;
+    const dBokeh = Math.sqrt(Math.random()) * PENTAGON_R * 1.5;
+    s.position.set(
+      Math.cos(aBokeh) * dBokeh + (Math.random() - 0.5) * 6,
+      Math.sin(aBokeh) * dBokeh + (Math.random() - 0.5) * 6,
+      (Math.random() - 0.5) * 14 + 6,
+    );
+    s.scale.setScalar(4 + Math.random() * 9);
     s.userData = { basePos: s.position.clone(), dx: (Math.random()-0.5)*0.6, dy: (Math.random()-0.5)*0.4, ph: Math.random()*Math.PI*2 };
     scene.add(s); bokeh.push(s);
   }
@@ -416,43 +489,62 @@
   // Closer FAR_START so the network is visible almost immediately when the
   // user enters the neural section (was z:170 which made the approach phase
   // feel empty for too long of the scroll).
-  const FAR_START = new THREE.Vector3(0, 6, 75);
+  // Closer FAR_START so the transition into the network starts much
+  // nearer (was z:75) — user wanted the user to enter the network
+  // close from the very first moment of the section.
+  const FAR_START = new THREE.Vector3(0, 4, 38);
 
-  // Per-hub camera personalities. Each hub gets a unique orbit shape so
-  // visiting hub 3 doesn't feel the same as visiting hub 1 — different
-  // distance, elevation, sweep direction and radius dynamics.
-  // Signature renamed to orbitAroundHub(hubIdx, localP) — the legacy
-  // 'side' parameter is now baked into each hub's angle preset.
+  // Per-hub camera personalities for pentagon layout. Each hub's camera
+  // position is built from:
+  //   outward = unit vector pointing from origin to hub (in XY plane)
+  //   tangent = perpendicular to outward in XY plane (for orbital sweep)
+  //   up      = z axis (for elevation)
+  //
+  // Then: pos = hub.pos + outward*outwardR + tangent*tangentOff + up*elev
+  //
+  // Each hub gets DIFFERENT values for distance from hub, elevation arc,
+  // tangential sweep direction, and z-axis offset — so the 5 visits feel
+  // visually distinct (some close, some pulled-back, some viewed from
+  // above, some from below, some swooping).
   const HUB_PERSONALITIES = [
-    // Hub 0 — close eye-level clockwise flyby, the intro hub
-    { radius: [15, 18], elev: [+1, +3], angle: [-1.0, +0.4], zOff: 6,  lookOff: [0, 0, 0] },
-    // Hub 1 — start tight, pull back to admire (radius grows)
-    { radius: [11, 26], elev: [+5, +4], angle: [+0.4, -0.5], zOff: 10, lookOff: [0, 0, 0] },
-    // Hub 2 — drop from above, end below: dramatic vertical move
-    { radius: [18, 20], elev: [+9, -2], angle: [-0.5, +0.7], zOff: 8,  lookOff: [0, 2, 0] },
-    // Hub 3 — swoop under and emerge (elev rises hugely)
-    { radius: [22, 16], elev: [-8, +5], angle: [+0.8, -0.3], zOff: 9,  lookOff: [0, -2, 0] },
-    // Hub 4 — spiral dive close (radius shrinks dramatically), wide sweep
-    { radius: [26, 12], elev: [-2, +2], angle: [-0.7, +1.0], zOff: 6,  lookOff: [0, 0, -3] },
+    // Hub 0 (top) — close eye-level approach, slight orbit clockwise
+    { outR: [14, 16], elev: [+2, +4],  tangent: [-12, +14], zOff: [+2, +4]  },
+    // Hub 1 (right-top) — pull back to admire, slow drift
+    { outR: [12, 22], elev: [+5, +3],  tangent: [+8,  -10], zOff: [+1, +5]  },
+    // Hub 2 (right-bottom) — drop from above to below
+    { outR: [18, 20], elev: [+8, -3],  tangent: [-10, +12], zOff: [+3, +1]  },
+    // Hub 3 (left-bottom) — swoop under, emerge upward
+    { outR: [20, 16], elev: [-7, +5],  tangent: [+14, -8],  zOff: [+4, +6]  },
+    // Hub 4 (left-top) — spiral dive close
+    { outR: [22, 13], elev: [-1, +2],  tangent: [-14, +14], zOff: [+5, +1]  },
   ];
 
-  function orbitAroundHub(hubIdx, localP /*, side ignored — using HUB_PERSONALITIES */) {
+  function orbitAroundHub(hubIdx, localP /*, side ignored — pentagon-relative */) {
     const hub = HUBS[hubIdx];
     const p = HUB_PERSONALITIES[hubIdx];
     const t = 0.5 - 0.5 * Math.cos(localP * Math.PI); // easeInOutSine
-    const radius = THREE.MathUtils.lerp(p.radius[0], p.radius[1], t);
-    const elev   = THREE.MathUtils.lerp(p.elev[0],   p.elev[1],   t);
-    const angle  = THREE.MathUtils.lerp(p.angle[0],  p.angle[1],  t);
-    // Subtle secondary oscillation so the orbit doesn't feel mechanical
-    const rW = Math.sin(localP * Math.PI * 2.3) * 1.4;
-    const eW = Math.cos(localP * Math.PI * 1.7) * 0.9;
+
+    const outR    = THREE.MathUtils.lerp(p.outR[0],    p.outR[1],    t);
+    const elev    = THREE.MathUtils.lerp(p.elev[0],    p.elev[1],    t);
+    const tangent = THREE.MathUtils.lerp(p.tangent[0], p.tangent[1], t);
+    const zOff    = THREE.MathUtils.lerp(p.zOff[0],    p.zOff[1],    t);
+
+    // outward unit vector (origin → hub) in XY plane
+    const outX = Math.cos(hub.angle), outY = Math.sin(hub.angle);
+    // tangent unit vector (perpendicular to outward, CCW)
+    const tanX = -Math.sin(hub.angle), tanY = Math.cos(hub.angle);
+
+    // Subtle secondary oscillation so motion doesn't feel mechanical
+    const wobble = Math.sin(localP * Math.PI * 2.1) * 0.8;
+    const elevWob = Math.cos(localP * Math.PI * 1.6) * 0.5;
+
     return {
       pos: new THREE.Vector3(
-        hub.pos.x + Math.sin(angle) * (radius + rW),
-        hub.pos.y + elev + eW,
-        hub.pos.z + Math.cos(angle) * (radius + rW) * 0.6 + p.zOff
+        hub.pos.x + outX * (outR + wobble) + tanX * tangent,
+        hub.pos.y + outY * (outR + wobble) + tanY * tangent,
+        hub.pos.z + elev + elevWob + zOff
       ),
-      look: hub.pos.clone().add(new THREE.Vector3(p.lookOff[0], p.lookOff[1], p.lookOff[2])),
+      look: hub.pos.clone(),
     };
   }
 
@@ -566,8 +658,10 @@
     let v = 0;
     // Only visible if section is currently in view (we-active) AND progress is in first 18%
     if (document.body.classList.contains('we-active')) {
-      if (smoothProgress < 0.16) v = 1;
-      else if (smoothProgress < 0.22) v = 1 - (smoothProgress - 0.16) / 0.06;
+      // Title visible only at the very beginning, fades out quickly so it
+      // doesn't linger over the network as user gets closer
+      if (smoothProgress < 0.05) v = 1;
+      else if (smoothProgress < 0.10) v = 1 - (smoothProgress - 0.05) / 0.05;
     }
     heading.style.opacity = v.toFixed(3);
     const s = 1 + Math.min(0.08, smoothProgress * 0.25);
@@ -629,7 +723,8 @@
   window.addEventListener('resize', resize);
 
   function animate(now) {
-    smoothProgress += (rawProgress - smoothProgress) * 0.14;
+    // Slower scroll follow — more cinematic, less abrupt camera response
+    smoothProgress += (rawProgress - smoothProgress) * 0.07;
 
     const { pos, look } = cameraAt(smoothProgress);
     // tiny float
