@@ -552,6 +552,14 @@
       const t = Math.max(0, Math.min(1, (scrolled - fadeStart) / (fadeEnd - fadeStart)));
       globalCanvas.style.opacity = (1 - t).toFixed(3);
       globalCanvas.style.pointerEvents = t > 0.5 ? 'none' : '';
+      // Once we start fading the canvas, paint the body navy via inline
+      // style so the bundle's automatic data-theme='light' swap (which the
+      // Oil chapter triggers) can't flash a white background through the
+      // transparent areas of the canvas. Inline style wins over the
+      // theme stylesheet without forcing !important on a global selector
+      // (a !important rule on html,body was breaking the Hero scene init).
+      if (t > 0.05) document.body.style.backgroundColor = '#000814';
+      else document.body.style.backgroundColor = '';
     }
     const rect = section.getBoundingClientRect();
     const inside = rect.top <= 1 && rect.bottom >= window.innerHeight * 0.5;
