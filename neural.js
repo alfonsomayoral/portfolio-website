@@ -535,22 +535,26 @@
   updateRaw();
   window.addEventListener('scroll', updateRaw, { passive: true });
 
-  // Belt-and-suspenders: fade the global WebGL canvas opacity from 1 to 0
-  // as the user scrolls through the hero. The original Oil + Metals chapter
-  // content lives in an off-screen wrapper so the WebGL bundle's
-  // IntersectionObserver shouldn't pick them up, but if anything ever did
-  // try to render after the hero it would be invisible anyway.
-  // body.we-active gates the neural-canvas overlay.
+  // Scroll-driven fade of the global WebGL canvas (which renders the hero
+  // mountain). Mountain is fully visible at scrollY 0, starts fading at
+  // 25% of hero height, fully gone at 60% of hero height. Beyond that the
+  // Trading bundle will try to render Oil/Metals scenes but with opacity 0
+  // they are completely invisible. Also force the body theme back to dark
+  // so the bundle's automatic data-theme="light" switch can't whiten the bg.
   const heroSection = document.querySelector('section.hero, [data-chapter="Hero"]');
   const globalCanvas = document.getElementById('canvas-wrapper');
   function updateChrome() {
     if (heroSection && globalCanvas) {
       const heroRect = heroSection.getBoundingClientRect();
-      const scrolledInto = Math.max(0, -heroRect.top);
-      // Fade from opacity 1 at scroll 0 to 0 at scroll = 60% of hero height
-      const t = Math.max(0, Math.min(1, scrolledInto / (heroRect.height * 0.6)));
+      const scrolled = Math.max(0, -heroRect.top);
+      const fadeStart = heroRect.height * 0.25;
+      const fadeEnd = heroRect.height * 0.55;
+      const t = Math.max(0, Math.min(1, (scrolled - fadeStart) / (fadeEnd - fadeStart)));
       globalCanvas.style.opacity = (1 - t).toFixed(3);
       globalCanvas.style.pointerEvents = t > 0.5 ? 'none' : '';
+      // Force dark theme once we start fading the mountain so the bundle's
+      // theme switches can't paint a white background under us.
+      if (t > 0.05) document.body.dataset.theme = 'dark';
     }
     const rect = section.getBoundingClientRect();
     const inside = rect.top <= 1 && rect.bottom >= window.innerHeight * 0.5;
