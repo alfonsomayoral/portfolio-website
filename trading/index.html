@@ -4,24 +4,22 @@
 	.scroll-to-cta {
 		opacity: 0;
 	}
-</style>  <section data-chapter="TradingChapter" id="trading-chapter" data-theme-chapters="dark" data-astro-cid-q53qi7p3> <div data-chapter data-astro-cid-q53qi7p3> <div class="grid" data-astro-cid-q53qi7p3>  <div class="read-more expandable tb:col-start-2 dk:col-start-10 dk:col-end-19 lg:col-start-13" data-animation="ReadMore" data-line-count="7" data-astro-cid-mer3b7za style="--line-count: 7;"> <div class="content-wrapper" data-astro-cid-mer3b7za style="--line-count: 7;"> <div data-astro-cid-mer3b7za style="--line-count: 7;"> <div class="content" data-astro-cid-mer3b7za style="--line-count: 7;"> <div class="inner clamp fs-body white" data-astro-cid-mer3b7za style="--line-count: 7;">    </div> </div> <button class="read-more-button white" data-animation="FadeIn" aria-label="Expand text button" data-astro-cid-pgfm4fb2> <div class="arrow" aria-hidden="true" data-astro-cid-pgfm4fb2></div> </button>  </div> </div> </div>  </div> </div> </section>
-
-<section id="experience-neural" class="experience-neural" data-theme-chapters="dark" data-astro-cid-q53qi7p3>
+</style>  <section id="experience-neural" class="experience-neural" data-theme-chapters="dark" data-astro-cid-q53qi7p3>
   <style>
     /* ===== Neural section ===== */
-    #experience-neural { position: relative; background: #000814; color: #eaf3ff; min-height: 600vh; padding: 0; overflow: visible; }
+    #experience-neural { position: relative; background: #000814; color: #eaf3ff; min-height: 800vh; padding: 0; overflow: visible; }
     #experience-neural::before { content:""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 30%, rgba(20,40,80,0.65) 0%, rgba(0,8,20,1) 70%); pointer-events: none; z-index: 0; }
     body.we-active #neural-canvas-wrap { opacity: 1 !important; }
     body.we-active #canvas-wrapper { opacity: 0 !important; transition: opacity 0.6s; pointer-events: none; }
     #neural-canvas-wrap { position: sticky; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 0.9s ease; margin: 0 calc(50% - 50vw); }
     #neural-canvas { width: 100%; height: 100%; display: block; background: transparent; }
-    .neural-heading { position: absolute; top: 12vh; left: 0; right: 0; z-index: 3; text-align: center; padding: 0 6vw; pointer-events: none; }
+    .neural-heading { position: fixed; top: 18vh; transition: opacity 0.4s ease; left: 0; right: 0; z-index: 3; text-align: center; padding: 0 6vw; pointer-events: none; }
     .neural-heading h2 { font-family: 'Josefin Sans','Century Gothic',sans-serif; font-weight: 300; font-size: clamp(28px, 4vw, 58px); line-height: 1.15; letter-spacing: -0.5px; color: #eaf3ff; max-width: 1100px; margin: 0 auto; text-shadow: 0 0 24px rgba(77,192,255,0.35); }
     .neural-heading .accent { color: #5cc8ff; }
     .neural-cards { position: relative; z-index: 4; pointer-events: none; }
-    .neural-card { position: fixed; top: 50%; width: 38vw; max-width: 540px; padding: 28px 30px; background: rgba(8,18,38,0.55); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(120,200,255,0.28); border-radius: 18px; box-shadow: 0 28px 80px rgba(0,0,0,0.65), inset 0 1px 0 rgba(180,225,255,0.18), 0 0 100px rgba(77,192,255,0.10); color: #eaf3ff; opacity: 0; transform: translateY(30px); transition: opacity 0.5s ease, transform 0.5s ease; will-change: opacity, transform; pointer-events: none; }
-    .neural-card--left  { left: 5vw; transform-origin: left center; }
-    .neural-card--right { right: 5vw; transform-origin: right center; }
+    .neural-card { position: fixed; top: 0; left: 0; width: 38vw; max-width: 480px; will-change: transform, opacity; padding: 28px 30px; background: rgba(8,18,38,0.55); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(120,200,255,0.28); border-radius: 18px; box-shadow: 0 28px 80px rgba(0,0,0,0.65), inset 0 1px 0 rgba(180,225,255,0.18), 0 0 100px rgba(77,192,255,0.10); color: #eaf3ff; opacity: 0; transform: translateY(30px); transition: opacity 0.5s ease, transform 0.5s ease; will-change: opacity, transform; pointer-events: none; }
+    .neural-card--left  { transform-origin: left center; }
+    .neural-card--right { transform-origin: right center; }
     .neural-card__num { font-family: 'Josefin Sans',sans-serif; font-size: 12px; letter-spacing: 4px; color: #5cc8ff; opacity: 0.7; margin-bottom: 10px; }
     .neural-card__title { font-family: 'Josefin Sans',sans-serif; font-weight: 500; font-size: clamp(20px, 1.8vw, 26px); line-height: 1.2; margin: 0 0 4px 0; color: #ffffff; }
     .neural-card__company { font-family: 'Josefin Sans',sans-serif; font-size: 15px; color: #9ad8ff; margin-bottom: 14px; letter-spacing: 0.4px; }
@@ -46,7 +44,7 @@
   </div>
 
   <div class="neural-cards">
-    <article class="neural-card neural-card--right" data-job="01" data-progress="0.1">
+    <article class="neural-card neural-card--right" data-job="01" data-progress="0.286" data-hub="0">
       <div class="neural-card__num">01</div>
       <h3 class="neural-card__title">Junior AI Engineer</h3>
       <div class="neural-card__company">Suntory Global Spirits</div>
@@ -55,12 +53,14 @@
         <span class="neural-card__badge neural-card__badge--date">Aug 2025 — Now</span>
       </div>
       <ul class="neural-card__bullets">
-        <li>Designing and shipping AI workflows for cross-functional teams across one of the world's largest F&amp;B groups.</li>
-        <li>Production tooling on Azure OpenAI, LangChain and internal data lakes — focus on measurable impact, not demos.</li>
-        <li>Owning PoC → pilot → rollout for use cases in commercial, supply chain and finance.</li>
+        <li>Design and develop custom MCP apps, MCP servers, tools and widgets that connect internal business systems with enterprise AI platforms, extending business workflows with agentic capabilities.</li>
+        <li>Build full-stack AI solutions for business use cases — frontend interfaces, backend services, APIs and MCP-based tool orchestration — production-ready, not demos.</li>
+        <li>Develop cloud-native solutions on Microsoft Azure: Azure SQL, AKS, Kubernetes, Docker, Azure DevOps, GitHub and CI/CD pipelines.</li>
+        <li>Integrate enterprise data sources and Microsoft platforms (Fabric, Lakehouse, Warehouse, SQL Server) into AI-powered applications so internal data becomes accessible and actionable.</li>
+        <li>Contributing to the evolution of a native enterprise AI chatbot platform — tool integrations, web search, deep research workflows and productivity-focused improvements.</li>
       </ul>
     </article>
-    <article class="neural-card neural-card--left" data-job="02" data-progress="0.3">
+    <article class="neural-card neural-card--left" data-job="02" data-progress="0.429" data-hub="1">
       <div class="neural-card__num">02</div>
       <h3 class="neural-card__title">Founder, CEO &amp; Full-Stack Engineer</h3>
       <div class="neural-card__company">Spotter AI</div>
@@ -69,12 +69,13 @@
         <span class="neural-card__badge neural-card__badge--date">Jan 2025 — Now</span>
       </div>
       <ul class="neural-card__bullets">
-        <li>Building Spotter AI end-to-end: Next.js + Supabase + Stripe, real-time computer-vision pipeline on the edge.</li>
-        <li>From idea to live product — design, infra, ML, frontend, payments and growth.</li>
-        <li>Currently in beta with paying gyms and athletes; YC application in progress.</li>
+        <li>Founded and developed Spotter AI, an AI-powered fitness platform combining workout tracking, nutrition analysis and social fitness features in one mobile experience.</li>
+        <li>Built the product end-to-end with React Native, Expo, Supabase, Edge Functions, Storage, RLS and AI-based food analysis — covering frontend, backend, database architecture, auth and deployment.</li>
+        <li>Designed AI-driven nutrition features that analyze meals from images, estimate macros, review results and track progress intuitively.</li>
+        <li>Led the full product cycle: idea validation, UX design, technical implementation, app distribution and team coordination.</li>
       </ul>
     </article>
-    <article class="neural-card neural-card--right" data-job="03" data-progress="0.5">
+    <article class="neural-card neural-card--right" data-job="03" data-progress="0.571" data-hub="2">
       <div class="neural-card__num">03</div>
       <h3 class="neural-card__title">Co-Founder, Vice-President &amp; Events Lead</h3>
       <div class="neural-card__company">AISC Madrid (UC3M)</div>
@@ -84,11 +85,11 @@
       </div>
       <ul class="neural-card__bullets">
         <li>Co-founded the first AISC chapter in Europe and the first AI student association at UC3M.</li>
-        <li>Run technical workshops, mentorship tracks and industry partnerships connecting students with AI-first companies.</li>
-        <li>Grew the community to 200+ members in the first semester.</li>
+        <li>Lead the events strategy: technical workshops, mentorship tracks and industry partnerships with AI-first companies.</li>
+        <li>Grew an active community of 200+ members focused on practical, in-demand AI skills and on bridging academia with industry.</li>
       </ul>
     </article>
-    <article class="neural-card neural-card--left" data-job="04" data-progress="0.7">
+    <article class="neural-card neural-card--left" data-job="04" data-progress="0.714" data-hub="3">
       <div class="neural-card__num">04</div>
       <h3 class="neural-card__title">SAP Consultor Assistant &amp; Data Analyst</h3>
       <div class="neural-card__company">Campus S.W.</div>
@@ -97,11 +98,12 @@
         <span class="neural-card__badge neural-card__badge--date">Jul 2023 — Aug 2024</span>
       </div>
       <ul class="neural-card__bullets">
-        <li>Supported SAP S/4HANA migrations for mid-market clients: data quality, master-data cleansing, dashboards.</li>
-        <li>Built Python + Power BI reporting to surface inconsistencies during go-live.</li>
+        <li>Supported SAP S/4HANA implementations for mid-market clients: master-data quality, data cleansing and cutover preparation.</li>
+        <li>Built Python and Power BI dashboards to surface data inconsistencies during go-live phases.</li>
+        <li>Cross-functional collaboration with functional consultants, development teams and business end users.</li>
       </ul>
     </article>
-    <article class="neural-card neural-card--right" data-job="05" data-progress="0.9">
+    <article class="neural-card neural-card--right" data-job="05" data-progress="0.857" data-hub="4">
       <div class="neural-card__num">05</div>
       <h3 class="neural-card__title">Talentum Scholarship Intern</h3>
       <div class="neural-card__company">Telefónica Business Solutions</div>
@@ -110,8 +112,9 @@
         <span class="neural-card__badge neural-card__badge--date">Jun 2022 — Aug 2022</span>
       </div>
       <ul class="neural-card__bullets">
-        <li>Selected for Telefónica's competitive Talentum programme — software development training inside Telefónica Group.</li>
-        <li>Solved 2 real-world case problems, attended 10+ sessions with senior engineers, joined 8+ team-building workshops on data, AI and software.</li>
+        <li>Selected for Telefónica Talentum — a competitive scholarship for software-development training inside the Telefónica Group, mentored by senior engineers.</li>
+        <li>Solved 2 real-world business case problems and attended 10+ sessions with industry professionals across the Group.</li>
+        <li>Participated in 8+ team-building workshops on data analysis, artificial intelligence and software development.</li>
       </ul>
     </article>
   </div>
