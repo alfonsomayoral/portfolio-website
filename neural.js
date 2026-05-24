@@ -535,20 +535,29 @@
   updateRaw();
   window.addEventListener('scroll', updateRaw, { passive: true });
 
-  // We-active only when the neural section's top has actually reached the
-  // top of the viewport (we're inside the section). Driven from scroll so
-  // it tracks scroll, not IntersectionObserver edges — that way the global
-  // WebGL canvas (hero mountain) stays fully visible until the user has
-  // actually scrolled into the neural section.
-  function updateActiveClass() {
+  // Two body classes drive the global WebGL canvas visibility:
+  //  - body.past-hero  : user has scrolled past more than half the hero.
+  //    We hide the global canvas immediately so the Trading scene's Oil
+  //    and Metals 3D models (which the bundle starts rendering as the
+  //    user scrolls past the hero) never have a chance to appear.
+  //  - body.we-active  : user is inside the neural section. Kept for the
+  //    neural-canvas-wrap opacity rule and a redundant canvas-wrapper
+  //    hide. The first class is what actually prevents the old animations
+  //    from leaking in; this one just gates the neural overlay.
+  const heroSection = document.querySelector('[data-chapter="Hero"]');
+  function updateChrome() {
+    if (heroSection) {
+      const heroRect = heroSection.getBoundingClientRect();
+      const heroPast = heroRect.bottom <= window.innerHeight * 0.5;
+      document.body.classList.toggle('past-hero', heroPast);
+    }
     const rect = section.getBoundingClientRect();
     const inside = rect.top <= 1 && rect.bottom >= window.innerHeight * 0.5;
-    if (inside) document.body.classList.add('we-active');
-    else document.body.classList.remove('we-active');
+    document.body.classList.toggle('we-active', inside);
   }
-  updateActiveClass();
-  window.addEventListener('scroll', updateActiveClass, { passive: true });
-  window.addEventListener('resize', updateActiveClass);
+  updateChrome();
+  window.addEventListener('scroll', updateChrome, { passive: true });
+  window.addEventListener('resize', updateChrome);
 
   // ---------- Animate ----------
   resize();
