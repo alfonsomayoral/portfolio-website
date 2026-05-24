@@ -70,9 +70,9 @@
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.85,   // strength
-    0.4,    // radius
-    0.7     // threshold (only pixels brighter than this contribute)
+    0.55,   // strength (was 0.85 — too aggressive close to hubs, washed cards)
+    0.35,   // radius
+    0.85    // threshold (was 0.7 — only the very brightest cores contribute now)
   );
   composer.addPass(bloom);
 
@@ -328,7 +328,7 @@
     });
     const s = new THREE.Sprite(m);
     s.position.copy(hub.pos);
-    s.scale.setScalar(38);
+    s.scale.setScalar(24);
     scene.add(s);
     return s;
   });
@@ -597,7 +597,7 @@
     camera.lookAt(look);
 
     for (let i = 0; i < hubStars.length; i++) {
-      const k = 36 + Math.sin(now * 0.001 + i * 0.7) * 3.0;
+      const k = 23 + Math.sin(now * 0.001 + i * 0.7) * 1.8;
       hubStars[i].scale.setScalar(k);
     }
     for (const s of bokeh) {
