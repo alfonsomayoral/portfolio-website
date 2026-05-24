@@ -535,21 +535,24 @@
   updateRaw();
   window.addEventListener('scroll', updateRaw, { passive: true });
 
-  // Two body classes drive the global WebGL canvas visibility:
-  //  - body.past-hero  : user has scrolled past more than half the hero.
-  //    We hide the global canvas immediately so the Trading scene's Oil
-  //    and Metals 3D models (which the bundle starts rendering as the
-  //    user scrolls past the hero) never have a chance to appear.
-  //  - body.we-active  : user is inside the neural section. Kept for the
-  //    neural-canvas-wrap opacity rule and a redundant canvas-wrapper
-  //    hide. The first class is what actually prevents the old animations
-  //    from leaking in; this one just gates the neural overlay.
+  // Global canvas fade is driven directly by scroll position (NOT a class
+  // toggle) so the transition is smooth from the very first pixel of
+  // scroll and there is no window where the WebGL bundle can leak the
+  // Trading scene's Oil/Metals 3D models. Fade starts at scroll 0 and is
+  // fully done by 40% of hero height — well before the bundle would try
+  // to render the next chapter. Then the body's navy bg shows through
+  // until the neural canvas takes over.
   const heroSection = document.querySelector('[data-chapter="Hero"]');
+  const globalCanvas = document.getElementById('canvas-wrapper');
   function updateChrome() {
-    if (heroSection) {
+    if (heroSection && globalCanvas) {
       const heroRect = heroSection.getBoundingClientRect();
-      const heroPast = heroRect.bottom <= window.innerHeight * 0.5;
-      document.body.classList.toggle('past-hero', heroPast);
+      const scrolledInto = Math.max(0, -heroRect.top);
+      const fadeEnd = heroRect.height * 0.4;
+      const t = Math.max(0, Math.min(1, scrolledInto / fadeEnd));
+      // Inline style overrides any class-based rules
+      globalCanvas.style.opacity = (1 - t).toFixed(3);
+      globalCanvas.style.pointerEvents = t > 0.5 ? 'none' : '';
     }
     const rect = section.getBoundingClientRect();
     const inside = rect.top <= 1 && rect.bottom >= window.innerHeight * 0.5;
