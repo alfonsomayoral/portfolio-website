@@ -1,33 +1,18 @@
-/* Neural network plexus flythrough — v6.
-   Visual upgrade pass to match the 14 AI reference images in
-   assets/neural-frames/. Three additive phases stacked on top of the v4
-   stations + camera path + cards architecture:
-
-   PHASE 1 — Density + brightness brute force
-     hub points 1200 → 3000, ambient 400 → 1200, 10 ambient clusters per
-     hub gap (was 6), maxConn 16 inside hubs (was 8), bigger hub-star
-     sprites at scale 38 (was 24), 32 radial rays per hub (was 22) with
-     gauss-distributed lengths.
-
-   PHASE 2 — Per-node rings + 60 ring constellations
-     A signature element of the reference images: many bright nodes have
-     a thin circle/halo ring around them. Implemented as an extra Sprite
-     layer placed at ~10% of bright nodes. Plus dispersed ring
-     constellations bumped 22 → 60.
-
-   PHASE 3 — Real UnrealBloomPass postprocessing
-     Replaces the fake bloom (stacked sprite layers) with real GPU bloom
-     via EffectComposer + RenderPass + UnrealBloomPass loaded from
-     esm.sh. Threshold 0.7 so only the brightest cores contribute. The
-     "spill of light onto neighbouring dark pixels" is what makes the
-     refs look photographic.
-
-   The full station-based camera path, card anchoring to hub screen
-   projection, idle float and heading fade are unchanged from v4. */
-
+/* Neural network plexus flythrough — v4.
+   Goals vs v3:
+   - Camera no longer slides at constant speed. Journey is split into
+     STATIONS: an initial far view, then per-hub VISITS where the camera
+     orbits the hub for a while (so the matching card has room to be
+     read), with fast TRANSITS between hubs and a final EXIT.
+   - Much denser network (1200 pts per hub, 6 ambient clusters per gap).
+   - Dual-layer point rendering: sharp bright cores + huge soft halos
+     stacked to fake bloom — gets close to the photographic quality of
+     the reference images without postprocessing.
+   - Title only visible while the user is actually inside the neural
+     section AND scroll progress is in the first 18%. */
 (async function () {
   const log = (...a) => console.log('[neural]', ...a);
-  log('boot v6');
+  log('boot v4');
 
   if (document.readyState === 'loading') {
     await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
@@ -38,55 +23,35 @@
   const heading = document.querySelector('.neural-heading');
   if (!canvas || !section) { log('no canvas/section, abort'); return; }
 
-  let THREE, EffectComposer, RenderPass, UnrealBloomPass;
+  let THREE;
   try {
     THREE = await import('https://esm.sh/three@0.160.0');
     log('THREE loaded', THREE.REVISION);
-    const pp1 = await import('https://esm.sh/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js');
-    const pp2 = await import('https://esm.sh/three@0.160.0/examples/jsm/postprocessing/RenderPass.js');
-    const pp3 = await import('https://esm.sh/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js');
-    EffectComposer = pp1.EffectComposer;
-    RenderPass = pp2.RenderPass;
-    UnrealBloomPass = pp3.UnrealBloomPass;
-    log('postprocessing loaded');
   } catch (e) {
-    console.error('[neural] failed loading three or postprocessing', e);
+    console.error('[neural] failed loading three', e);
     return;
   }
 
   // ---------- Renderer ----------
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setClearColor(0x000000, 0);
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x000814, 0.0075);
 
   const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 800);
-  camera.position.set(0, 6, 75);
-
-  // PHASE 3 — Composer with bloom
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.55,   // strength (was 0.85 — too aggressive close to hubs, washed cards)
-    0.35,   // radius
-    0.85    // threshold (was 0.7 — only the very brightest cores contribute now)
-  );
-  composer.addPass(bloom);
+  camera.position.set(0, 6, 160);
 
   const resize = () => {
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
-    composer.setSize(w, h);
-    bloom.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   };
 
-  // ---------- 5 hub waypoints ----------
+  // ---------- 5 hub waypoints, spread along Z ----------
   const HUBS = [
     { pos: new THREE.Vector3(  0,   0,    0), color: 0x6cd2ff },
     { pos: new THREE.Vector3( 38,  -4,  -80), color: 0x7ad8ff },
@@ -95,17 +60,17 @@
     { pos: new THREE.Vector3(-28,  -2, -350), color: 0x6cd2ff },
   ];
 
-  // ---------- Ambient clusters between hubs — PHASE 1: 10 per gap ----------
+  // ---------- Ambient clusters between hubs (off-axis, leaving the line clean) ----------
   const AMBIENT = [];
   for (let i = 0; i < HUBS.length - 1; i++) {
     const a = HUBS[i].pos, b = HUBS[i + 1].pos;
-    for (let k = 0; k < 10; k++) {
-      const t = (k + 1) / 11;
+    for (let k = 0; k < 6; k++) {
+      const t = (k + 1) / 7;
       const mid = a.clone().lerp(b, t);
       const offDir = new THREE.Vector3(
-        (Math.random() < 0.5 ? -1 : 1) * (30 + Math.random() * 25),
-        (Math.random() - 0.5) * 30,
-        (Math.random() - 0.5) * 26
+        (Math.random() < 0.5 ? -1 : 1) * (32 + Math.random() * 22),
+        (Math.random() - 0.5) * 28,
+        (Math.random() - 0.5) * 24
       );
       AMBIENT.push({ pos: mid.add(offDir), color: 0x3da8ff });
     }
@@ -119,8 +84,6 @@
   // ---------- Buffers ----------
   const POS = [], COL = [], SIZ = [];
   const LINE_POS = [], LINE_COL = [];
-  // PHASE 2 — collect bright nodes for the ring overlay
-  const RING_NODES = []; // { pos: Vector3, scale: number, color: number }
 
   const gauss = (s) => {
     let u = 0, v = 0;
@@ -129,12 +92,14 @@
     return s * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   };
 
+  // Keep references to each cluster's local points so we can build
+  // long-range cross-cluster connections in a second pass.
+  const CLUSTER_PTS = [];
+
   for (const cl of CLUSTERS) {
-    // PHASE 1 — density boost
-    const N = cl.isHub ? 3000 : 1200;
-    const spread = cl.isHub ? 11 : 7;
+    const N = cl.isHub ? 1200 : 400;
+    const spread = cl.isHub ? 10 : 6.5;
     const localPts = [];
-    const localSizes = [];
     const color = new THREE.Color(cl.color);
 
     for (let i = 0; i < N; i++) {
@@ -145,23 +110,16 @@
       );
       localPts.push(p);
       POS.push(p.x, p.y, p.z);
-      const c = color.clone().lerp(new THREE.Color(0xffffff), Math.random() * 0.55);
+      const c = color.clone().lerp(new THREE.Color(0xffffff), Math.random() * 0.45);
       COL.push(c.r, c.g, c.b);
       const distNorm = Math.min(1, p.distanceTo(cl.pos) / spread);
-      const baseS = cl.isHub ? 3.4 : 2.0;
-      const s = THREE.MathUtils.lerp(baseS, 0.3, distNorm * distNorm);
-      SIZ.push(s);
-      localSizes.push(s);
-
-      // PHASE 2 — ~10% of the brightest nodes get a ring overlay
-      if (s > baseS * 0.55 && Math.random() < 0.10) {
-        RING_NODES.push({ pos: p.clone(), scale: 0.9 + s * 0.6, color: cl.color });
-      }
+      const baseS = cl.isHub ? 3.0 : 1.8;
+      SIZ.push(THREE.MathUtils.lerp(baseS, 0.3, distNorm * distNorm));
     }
 
-    // PHASE 1 — denser plexus
-    const threshold = cl.isHub ? 3.0 : 2.4;
-    const maxConn = cl.isHub ? 16 : 10;
+    // Denser plexus inside cluster (maxConn 8->14 hubs, 5->9 ambient)
+    const threshold = cl.isHub ? 3.6 : 2.7;
+    const maxConn = cl.isHub ? 14 : 9;
     for (let i = 0; i < localPts.length; i++) {
       let cnt = 0;
       for (let j = i + 1; j < localPts.length && cnt < maxConn; j++) {
@@ -170,17 +128,43 @@
           LINE_POS.push(localPts[i].x, localPts[i].y, localPts[i].z,
                         localPts[j].x, localPts[j].y, localPts[j].z);
           const k = 1 - d / threshold;
-          const lc = color.clone().multiplyScalar(0.40 + k * 0.75);
+          const lc = color.clone().multiplyScalar(0.4 + k * 0.75);
           LINE_COL.push(lc.r, lc.g, lc.b, lc.r, lc.g, lc.b);
           cnt++;
         }
       }
     }
+
+    CLUSTER_PTS.push({ pts: localPts, color, isHub: cl.isHub });
   }
 
-  log('built', POS.length / 3, 'points,', LINE_POS.length / 6, 'lines,', RING_NODES.length, 'rings');
+  // Cross-cluster long-range connections: each cluster picks ~25 random
+  // points (50 for hubs) and connects them to a random point in another
+  // cluster within a reasonable distance. This is what produces the long
+  // arcing lines between distant parts of the network in the references.
+  for (let ci = 0; ci < CLUSTER_PTS.length; ci++) {
+    const a = CLUSTER_PTS[ci];
+    const samples = a.isHub ? 50 : 25;
+    for (let s = 0; s < samples; s++) {
+      const p1 = a.pts[Math.floor(Math.random() * a.pts.length)];
+      // pick a random different cluster
+      let cj = ci;
+      while (cj === ci) cj = Math.floor(Math.random() * CLUSTER_PTS.length);
+      const b = CLUSTER_PTS[cj];
+      const p2 = b.pts[Math.floor(Math.random() * b.pts.length)];
+      const d = p1.distanceTo(p2);
+      // skip excessively long ones — they look bad cutting across whole scene
+      if (d > 220) continue;
+      LINE_POS.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+      // Dim cyan so they read as background filaments, not foreground edges
+      const cc = new THREE.Color(0x4dc0ff).multiplyScalar(0.35);
+      LINE_COL.push(cc.r, cc.g, cc.b, cc.r, cc.g, cc.b);
+    }
+  }
 
-  // ---------- Sprite makers ----------
+  log('built', POS.length / 3, 'points,', LINE_POS.length / 6, 'lines');
+
+  // ---------- Sprites ----------
   const mkSprite = (size, stops) => {
     const c = document.createElement('canvas');
     c.width = c.height = size;
@@ -193,73 +177,50 @@
     return { tex, canvas: c };
   };
 
-  // Sharp bright core for individual points
+  // Sharp bright core
   const coreSprite = mkSprite(64, [
     [0.00, 'rgba(255,255,255,1.0)'],
     [0.10, 'rgba(230,245,255,0.95)'],
-    [0.30, 'rgba(140,210,255,0.55)'],
-    [0.65, 'rgba(60,150,240,0.12)'],
+    [0.30, 'rgba(140,210,255,0.50)'],
+    [0.65, 'rgba(60,150,240,0.10)'],
     [1.00, 'rgba(0,0,0,0)'],
   ]).tex;
 
-  // PHASE 1 — bigger, brighter hub-star sprite (384px canvas vs 256)
-  const starBuilt = mkSprite(384, [
+  // Wide soft halo (used at lower alpha, larger size, additive) — fakes bloom
+  const haloSprite = mkSprite(128, [
+    [0.00, 'rgba(180,230,255,0.55)'],
+    [0.25, 'rgba(120,200,255,0.30)'],
+    [0.60, 'rgba(60,150,240,0.08)'],
+    [1.00, 'rgba(0,0,0,0)'],
+  ]).tex;
+
+  // Star sprite for hub centers
+  const starBuilt = mkSprite(256, [
     [0.00, 'rgba(255,255,255,1.0)'],
-    [0.05, 'rgba(245,250,255,0.98)'],
-    [0.18, 'rgba(170,220,255,0.65)'],
-    [0.42, 'rgba(80,170,250,0.22)'],
-    [0.75, 'rgba(40,110,210,0.05)'],
+    [0.07, 'rgba(230,245,255,0.95)'],
+    [0.22, 'rgba(140,210,255,0.55)'],
+    [0.50, 'rgba(60,150,240,0.15)'],
     [1.00, 'rgba(0,0,0,0)'],
   ]);
+  // Add cross flare on top
   {
     const g = starBuilt.canvas.getContext('2d');
     g.globalCompositeOperation = 'lighter';
-    g.strokeStyle = 'rgba(235,248,255,0.7)';
-    g.lineWidth = 3;
-    g.beginPath(); g.moveTo(192, 0); g.lineTo(192, 384); g.stroke();
-    g.beginPath(); g.moveTo(0, 192); g.lineTo(384, 192); g.stroke();
+    g.strokeStyle = 'rgba(230,245,255,0.65)';
+    g.lineWidth = 2;
+    g.beginPath(); g.moveTo(128, 0); g.lineTo(128, 256); g.stroke();
+    g.beginPath(); g.moveTo(0, 128); g.lineTo(256, 128); g.stroke();
     starBuilt.tex.needsUpdate = true;
   }
   const starSprite = starBuilt.tex;
 
-  // PHASE 2 — Ring sprite: hollow circle with soft inner+outer glow
-  const ringSprite = (() => {
-    const size = 128;
-    const c = document.createElement('canvas');
-    c.width = c.height = size;
-    const g = c.getContext('2d');
-    const cx = size / 2, cy = size / 2;
-    const innerR = size * 0.34;
-    const outerR = size * 0.46;
-    const ringR = (innerR + outerR) / 2;
-    // Outer soft glow
-    const outerGrd = g.createRadialGradient(cx, cy, ringR * 0.7, cx, cy, ringR * 1.5);
-    outerGrd.addColorStop(0.00, 'rgba(180,225,255,0.0)');
-    outerGrd.addColorStop(0.50, 'rgba(120,200,255,0.35)');
-    outerGrd.addColorStop(1.00, 'rgba(0,0,0,0)');
-    g.fillStyle = outerGrd; g.fillRect(0, 0, size, size);
-    // Solid ring stroke
-    g.globalCompositeOperation = 'lighter';
-    g.strokeStyle = 'rgba(200,235,255,0.7)';
-    g.lineWidth = (outerR - innerR) * 0.55;
-    g.beginPath(); g.arc(cx, cy, ringR, 0, Math.PI * 2); g.stroke();
-    // Inner soft fill
-    g.strokeStyle = 'rgba(140,210,255,0.25)';
-    g.lineWidth = (outerR - innerR) * 1.2;
-    g.beginPath(); g.arc(cx, cy, ringR, 0, Math.PI * 2); g.stroke();
-    const tex = new THREE.CanvasTexture(c);
-    tex.needsUpdate = true;
-    return tex;
-  })();
-
-  // ---------- Points layer (sharp cores) ----------
+  // ---------- Build TWO point layers sharing the same geometry: sharp cores + wide halos ----------
   const pointsGeo = new THREE.BufferGeometry();
   pointsGeo.setAttribute('position', new THREE.Float32BufferAttribute(POS, 3));
   pointsGeo.setAttribute('color', new THREE.Float32BufferAttribute(COL, 3));
   pointsGeo.setAttribute('size', new THREE.Float32BufferAttribute(SIZ, 1));
 
-  const corePoints = new THREE.Points(pointsGeo, new THREE.ShaderMaterial({
-    uniforms: { uSprite: { value: coreSprite } },
+  const coreShader = {
     vertexShader: `
       attribute float size;
       varying vec3 vColor;
@@ -267,7 +228,7 @@
         vColor = color;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         gl_Position = projectionMatrix * mv;
-        gl_PointSize = size * 250.0 / -mv.z;
+        gl_PointSize = size * 230.0 / -mv.z;
       }
     `,
     fragmentShader: `
@@ -279,21 +240,54 @@
         if (gl_FragColor.a < 0.02) discard;
       }
     `,
+  };
+
+  const corePoints = new THREE.Points(pointsGeo, new THREE.ShaderMaterial({
+    uniforms: { uSprite: { value: coreSprite } },
+    vertexShader: coreShader.vertexShader,
+    fragmentShader: coreShader.fragmentShader,
     vertexColors: true, transparent: true, depthWrite: false,
     blending: THREE.AdditiveBlending,
   }));
   scene.add(corePoints);
+
+  // Halo layer (same vertices, much bigger gl_PointSize multiplier, soft sprite)
+  const haloPoints = new THREE.Points(pointsGeo, new THREE.ShaderMaterial({
+    uniforms: { uSprite: { value: haloSprite } },
+    vertexShader: `
+      attribute float size;
+      varying vec3 vColor;
+      void main() {
+        vColor = color;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = size * 750.0 / -mv.z;
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D uSprite;
+      varying vec3 vColor;
+      void main() {
+        vec4 tex = texture2D(uSprite, gl_PointCoord);
+        gl_FragColor = vec4(vColor, 1.0) * tex * 0.35;
+        if (gl_FragColor.a < 0.01) discard;
+      }
+    `,
+    vertexColors: true, transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  }));
+  scene.add(haloPoints);
 
   // ---------- Plexus lines ----------
   const linesGeo = new THREE.BufferGeometry();
   linesGeo.setAttribute('position', new THREE.Float32BufferAttribute(LINE_POS, 3));
   linesGeo.setAttribute('color', new THREE.Float32BufferAttribute(LINE_COL, 3));
   scene.add(new THREE.LineSegments(linesGeo, new THREE.LineBasicMaterial({
-    vertexColors: true, transparent: true, opacity: 0.62,
+    vertexColors: true, transparent: true, opacity: 0.55,
     blending: THREE.AdditiveBlending, depthWrite: false,
   })));
 
-  // ---------- Inter-hub bezier curves ----------
+  // ---------- Long curved inter-hub bezier links ----------
   {
     const verts = [], cols = [];
     for (let i = 0; i < HUBS.length; i++) {
@@ -315,12 +309,12 @@
     g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({
-      vertexColors: true, transparent: true, opacity: 0.48,
+      vertexColors: true, transparent: true, opacity: 0.42,
       blending: THREE.AdditiveBlending, depthWrite: false,
     })));
   }
 
-  // ---------- Hub stars (PHASE 1 — bigger) ----------
+  // ---------- Hub stars + radial bursts ----------
   const hubStars = HUBS.map(hub => {
     const m = new THREE.SpriteMaterial({
       map: starSprite, color: hub.color,
@@ -333,59 +327,41 @@
     return s;
   });
 
-  // PHASE 1 — radial bursts: 32 rays per hub with gauss-varied lengths
   for (const hub of HUBS) {
     const v = [], c = [];
-    const cc = new THREE.Color(hub.color).lerp(new THREE.Color(0xffffff), 0.65);
-    const rays = 32;
+    const cc = new THREE.Color(hub.color).lerp(new THREE.Color(0xffffff), 0.6);
+    const rays = 22;
     for (let r = 0; r < rays; r++) {
-      const ang = (r / rays) * Math.PI * 2 + (Math.random() - 0.5) * 0.08;
-      const len = 9 + Math.abs(gauss(5)) + Math.random() * 4;
+      const ang = (r / rays) * Math.PI * 2;
+      const len = 10 + Math.random() * 8;
       const dx = Math.cos(ang) * len;
-      const dy = Math.sin(ang) * len * 0.7;
-      const dz = (Math.random() - 0.5) * 7;
+      const dy = Math.sin(ang) * len * 0.65;
+      const dz = (Math.random() - 0.5) * 6;
       v.push(hub.pos.x, hub.pos.y, hub.pos.z, hub.pos.x + dx, hub.pos.y + dy, hub.pos.z + dz);
-      c.push(cc.r, cc.g, cc.b, 0.03, 0.14, 0.42);
+      c.push(cc.r, cc.g, cc.b, 0.04, 0.16, 0.4);
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
     scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({
-      vertexColors: true, transparent: true, opacity: 0.78,
+      vertexColors: true, transparent: true, opacity: 0.7,
       blending: THREE.AdditiveBlending, depthWrite: false,
     })));
   }
 
-  // ---------- PHASE 2 — Per-node rings overlay ----------
-  // Each bright node gets a small ring sprite. Renders the "signature" look
-  // of the reference images where dense nodes are surrounded by little
-  // circles of their own.
-  for (const r of RING_NODES) {
-    const m = new THREE.SpriteMaterial({
-      map: ringSprite, color: r.color,
-      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
-      opacity: 0.55 + Math.random() * 0.35,
-    });
-    const s = new THREE.Sprite(m);
-    s.position.copy(r.pos);
-    s.scale.setScalar(r.scale);
-    scene.add(s);
-  }
-
-  // ---------- PHASE 2 — Scattered ring constellations (60, was 22) ----------
-  for (let i = 0; i < 60; i++) {
-    const r = 0.8 + Math.random() * 2.5;
-    const eg = new THREE.EdgesGeometry(new THREE.RingGeometry(r, r + 0.04, 36));
+  // ---------- Scattered rings ----------
+  for (let i = 0; i < 22; i++) {
+    const r = 1.0 + Math.random() * 2.5;
+    const eg = new THREE.EdgesGeometry(new THREE.RingGeometry(r, r + 0.04, 40));
     const ring = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({
-      color: 0x4dc0ff, transparent: true,
-      opacity: 0.18 + Math.random() * 0.30,
+      color: 0x4dc0ff, transparent: true, opacity: 0.28,
       blending: THREE.AdditiveBlending, depthWrite: false,
     }));
     const t = Math.random();
     const i0 = Math.min(HUBS.length - 2, Math.floor(t * (HUBS.length - 1)));
     const p0 = HUBS[i0].pos, p1 = HUBS[i0 + 1].pos;
     ring.position.copy(p0.clone().lerp(p1, Math.random()).add(new THREE.Vector3(
-      (Math.random() - 0.5) * 85, (Math.random() - 0.5) * 32, (Math.random() - 0.5) * 40
+      (Math.random() - 0.5) * 70, (Math.random() - 0.5) * 28, (Math.random() - 0.5) * 34
     )));
     ring.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
     scene.add(ring);
@@ -398,7 +374,7 @@
     [1.00, 'rgba(0,0,0,0)'],
   ]).tex;
   const bokeh = [];
-  for (let i = 0; i < 32; i++) {
+  for (let i = 0; i < 28; i++) {
     const m = new THREE.SpriteMaterial({
       map: bokehTex, transparent: true,
       blending: THREE.AdditiveBlending, depthWrite: false,
@@ -409,49 +385,79 @@
     const i0 = Math.min(HUBS.length - 2, Math.floor(t * (HUBS.length - 1)));
     const p0 = HUBS[i0].pos, p1 = HUBS[i0 + 1].pos;
     s.position.copy(p0.clone().lerp(p1, Math.random()).add(new THREE.Vector3(
-      (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 22, (Math.random() - 0.5) * 32 + 12,
+      (Math.random() - 0.5) * 45, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 30 + 10,
     )));
-    s.scale.setScalar(5 + Math.random() * 11);
+    s.scale.setScalar(4 + Math.random() * 10);
     s.userData = { basePos: s.position.clone(), dx: (Math.random()-0.5)*0.6, dy: (Math.random()-0.5)*0.4, ph: Math.random()*Math.PI*2 };
     scene.add(s); bokeh.push(s);
   }
 
   // ---------- Far stardust ----------
   {
-    const N = 3000;
+    const N = 2500;
     const pos = new Float32Array(N * 3);
     for (let i = 0; i < N; i++) {
-      pos[i*3+0] = (Math.random() - 0.5) * 650;
-      pos[i*3+1] = (Math.random() - 0.5) * 200;
-      pos[i*3+2] = -Math.random() * 500;
+      pos[i*3+0] = (Math.random() - 0.5) * 600;
+      pos[i*3+1] = (Math.random() - 0.5) * 180;
+      pos[i*3+2] = -Math.random() * 450;
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     scene.add(new THREE.Points(g, new THREE.PointsMaterial({
-      color: 0x7ad8ff, size: 0.4, sizeAttenuation: true,
-      transparent: true, opacity: 0.55,
+      color: 0x7ad8ff, size: 0.45, sizeAttenuation: true,
+      transparent: true, opacity: 0.5,
       blending: THREE.AdditiveBlending, depthWrite: false,
     })));
   }
 
-  // ---------- CAMERA STATIONS (unchanged from v4) ----------
+  // ---------- CAMERA STATIONS ----------
+  // Each station owns a range of scrollProgress and a function (localP) → {pos, look}.
+  // visit station orbits a hub; transit station lerps; approach/exit are linear.
+  // Closer FAR_START so the network is visible almost immediately when the
+  // user enters the neural section (was z:170 which made the approach phase
+  // feel empty for too long of the scroll).
   const FAR_START = new THREE.Vector3(0, 6, 75);
 
-  function orbitAroundHub(hubIdx, localP, side) {
+  // Per-hub camera personalities. Each hub gets a unique orbit shape so
+  // visiting hub 3 doesn't feel the same as visiting hub 1 — different
+  // distance, elevation, sweep direction and radius dynamics.
+  // Signature renamed to orbitAroundHub(hubIdx, localP) — the legacy
+  // 'side' parameter is now baked into each hub's angle preset.
+  const HUB_PERSONALITIES = [
+    // Hub 0 — close eye-level clockwise flyby, the intro hub
+    { radius: [15, 18], elev: [+1, +3], angle: [-1.0, +0.4], zOff: 6,  lookOff: [0, 0, 0] },
+    // Hub 1 — start tight, pull back to admire (radius grows)
+    { radius: [11, 26], elev: [+5, +4], angle: [+0.4, -0.5], zOff: 10, lookOff: [0, 0, 0] },
+    // Hub 2 — drop from above, end below: dramatic vertical move
+    { radius: [18, 20], elev: [+9, -2], angle: [-0.5, +0.7], zOff: 8,  lookOff: [0, 2, 0] },
+    // Hub 3 — swoop under and emerge (elev rises hugely)
+    { radius: [22, 16], elev: [-8, +5], angle: [+0.8, -0.3], zOff: 9,  lookOff: [0, -2, 0] },
+    // Hub 4 — spiral dive close (radius shrinks dramatically), wide sweep
+    { radius: [26, 12], elev: [-2, +2], angle: [-0.7, +1.0], zOff: 6,  lookOff: [0, 0, -3] },
+  ];
+
+  function orbitAroundHub(hubIdx, localP /*, side ignored — using HUB_PERSONALITIES */) {
     const hub = HUBS[hubIdx];
-    const t = 0.5 - 0.5 * Math.cos(localP * Math.PI);
-    const angle = side * (-0.6 + t * 1.3);
-    const radius = 22 - Math.sin(localP * Math.PI) * 7;
-    const elev = (hubIdx % 2 === 0 ? 4 : -3) + Math.sin(localP * Math.PI * 1.7) * 2.5;
-    const pos = new THREE.Vector3(
-      hub.pos.x + Math.sin(angle) * radius,
-      hub.pos.y + elev,
-      hub.pos.z + Math.cos(angle) * radius * 0.6 + 8
-    );
-    return { pos, look: hub.pos.clone() };
+    const p = HUB_PERSONALITIES[hubIdx];
+    const t = 0.5 - 0.5 * Math.cos(localP * Math.PI); // easeInOutSine
+    const radius = THREE.MathUtils.lerp(p.radius[0], p.radius[1], t);
+    const elev   = THREE.MathUtils.lerp(p.elev[0],   p.elev[1],   t);
+    const angle  = THREE.MathUtils.lerp(p.angle[0],  p.angle[1],  t);
+    // Subtle secondary oscillation so the orbit doesn't feel mechanical
+    const rW = Math.sin(localP * Math.PI * 2.3) * 1.4;
+    const eW = Math.cos(localP * Math.PI * 1.7) * 0.9;
+    return {
+      pos: new THREE.Vector3(
+        hub.pos.x + Math.sin(angle) * (radius + rW),
+        hub.pos.y + elev + eW,
+        hub.pos.z + Math.cos(angle) * (radius + rW) * 0.6 + p.zOff
+      ),
+      look: hub.pos.clone().add(new THREE.Vector3(p.lookOff[0], p.lookOff[1], p.lookOff[2])),
+    };
   }
 
   const STATIONS = [
+    // type, range[start,end], data
     { type: 'approach', range: [0.00, 0.08] },
     { type: 'visit',    range: [0.08, 0.22], hub: 0, side: +1 },
     { type: 'transit',  range: [0.22, 0.28], from: 0, to: 1 },
@@ -469,33 +475,50 @@
     const st = STATIONS.find(s => p >= s.range[0] && p < s.range[1]) || STATIONS[STATIONS.length - 1];
     const localP = (p - st.range[0]) / (st.range[1] - st.range[0]);
     if (st.type === 'approach') {
+      // Far → close to hub-0 starting orbit position
       const startPos = FAR_START.clone();
       const o = orbitAroundHub(0, 0, +1);
       const endPos = o.pos.clone();
-      return { pos: startPos.lerp(endPos, smoothStep(localP)), look: HUBS[0].pos.clone() };
+      return {
+        pos: startPos.lerp(endPos, smoothStep(localP)),
+        look: HUBS[0].pos.clone(),
+      };
     }
-    if (st.type === 'visit') return orbitAroundHub(st.hub, localP, st.side);
+    if (st.type === 'visit') {
+      return orbitAroundHub(st.hub, localP, st.side);
+    }
     if (st.type === 'transit') {
       const a = orbitAroundHub(st.from, 1, STATIONS.find(s => s.type === 'visit' && s.hub === st.from).side);
       const b = orbitAroundHub(st.to,   0, STATIONS.find(s => s.type === 'visit' && s.hub === st.to).side);
       const t = smoothStep(localP);
-      return { pos: a.pos.clone().lerp(b.pos, t), look: HUBS[st.from].pos.clone().lerp(HUBS[st.to].pos, t) };
+      return {
+        pos: a.pos.clone().lerp(b.pos, t),
+        look: HUBS[st.from].pos.clone().lerp(HUBS[st.to].pos, t),
+      };
     }
+    // exit
     const a = orbitAroundHub(4, 1, +1);
     const end = HUBS[4].pos.clone().add(new THREE.Vector3(0, 0, -60));
-    return { pos: a.pos.clone().lerp(end, smoothStep(localP)), look: HUBS[4].pos.clone().add(new THREE.Vector3(0, 0, -20)) };
+    return {
+      pos: a.pos.clone().lerp(end, smoothStep(localP)),
+      look: HUBS[4].pos.clone().add(new THREE.Vector3(0, 0, -20)),
+    };
   }
+
   function smoothStep(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
 
-  // ---------- Cards ----------
+  // ---------- Cards: visible during their hub's visit station ----------
   const visitByHub = {};
   for (const st of STATIONS) if (st.type === 'visit') visitByHub[st.hub] = st;
-  const cards = Array.from(section.querySelectorAll('.neural-card')).map(el => ({
-    el,
-    hub: parseInt(el.dataset.hub, 10),
-    visit: visitByHub[parseInt(el.dataset.hub, 10)],
-    side: el.classList.contains('neural-card--left') ? 'left' : 'right',
-  }));
+
+  const cards = Array.from(section.querySelectorAll('.neural-card')).map(el => {
+    const hub = parseInt(el.dataset.hub, 10);
+    const visit = visitByHub[hub];
+    return {
+      el, hub, visit,
+      side: el.classList.contains('neural-card--left') ? 'left' : 'right',
+    };
+  });
 
   const VEC = new THREE.Vector3();
   function positionCards() {
@@ -504,6 +527,7 @@
       const [a, b] = c.visit.range;
       let vis = 0;
       if (smoothProgress >= a - 0.02 && smoothProgress <= b + 0.02) {
+        // fade in over first 0.03, fade out over last 0.03
         const fadeIn = Math.min(1, (smoothProgress - a + 0.02) / 0.04);
         const fadeOut = Math.min(1, (b + 0.02 - smoothProgress) / 0.04);
         vis = Math.max(0, Math.min(1, Math.min(fadeIn, fadeOut)));
@@ -514,6 +538,7 @@
         c.el.style.pointerEvents = 'none';
         continue;
       }
+      // Project hub to screen
       VEC.copy(HUBS[c.hub].pos).project(camera);
       const sx = (VEC.x + 1) * 0.5 * w;
       const sy = (1 - (VEC.y + 1) * 0.5) * h;
@@ -535,9 +560,11 @@
     }
   }
 
+  // ---------- Title fade: only during approach + early into hub-0 visit ----------
   function updateHeading() {
     if (!heading) return;
     let v = 0;
+    // Only visible if section is currently in view (we-active) AND progress is in first 18%
     if (document.body.classList.contains('we-active')) {
       if (smoothProgress < 0.16) v = 1;
       else if (smoothProgress < 0.22) v = 1 - (smoothProgress - 0.16) / 0.06;
@@ -559,7 +586,12 @@
   updateRaw();
   window.addEventListener('scroll', updateRaw, { passive: true });
 
-  // Hero canvas fade + body bg + we-active
+  // Scroll-driven fade of the global WebGL canvas (which renders the hero
+  // mountain). Mountain is fully visible at scrollY 0, starts fading at
+  // 25% of hero height, fully gone at 60% of hero height. Beyond that the
+  // Trading bundle will try to render Oil/Metals scenes but with opacity 0
+  // they are completely invisible. Also force the body theme back to dark
+  // so the bundle's automatic data-theme="light" switch can't whiten the bg.
   const heroSection = document.querySelector('section.hero, [data-chapter="Hero"]');
   const globalCanvas = document.getElementById('canvas-wrapper');
   function updateChrome() {
@@ -571,9 +603,18 @@
       const t = Math.max(0, Math.min(1, (scrolled - fadeStart) / (fadeEnd - fadeStart)));
       globalCanvas.style.opacity = (1 - t).toFixed(3);
       globalCanvas.style.pointerEvents = t > 0.5 ? 'none' : '';
+      // Once we start fading the canvas, paint the body navy via inline
+      // style so the bundle's automatic data-theme='light' swap (which the
+      // Oil chapter triggers) can't flash a white background through the
+      // transparent areas of the canvas. Inline style wins over the
+      // theme stylesheet without forcing !important on a global selector
+      // (a !important rule on html,body was breaking the Hero scene init).
       if (t > 0.05) document.body.style.backgroundColor = '#000814';
       else document.body.style.backgroundColor = '';
     }
+    // Activate the neural overlay as soon as the section's top reaches
+    // 60% of the viewport (was: only when section already filled half the
+    // viewport, which felt like the network appeared too late).
     const rect = section.getBoundingClientRect();
     const vh = window.innerHeight;
     const inside = rect.top <= vh * 0.6 && rect.bottom >= 0;
@@ -591,29 +632,33 @@
     smoothProgress += (rawProgress - smoothProgress) * 0.14;
 
     const { pos, look } = cameraAt(smoothProgress);
+    // tiny float
     pos.x += Math.sin(now * 0.0005) * 0.4;
     pos.y += Math.cos(now * 0.0004) * 0.3;
     camera.position.copy(pos);
     camera.lookAt(look);
 
+    // Pulsing hub stars
     for (let i = 0; i < hubStars.length; i++) {
-      const k = 23 + Math.sin(now * 0.001 + i * 0.7) * 1.8;
+      const k = 23 + Math.sin(now * 0.001 + i * 0.7) * 2.2;
       hubStars[i].scale.setScalar(k);
     }
+
+    // Bokeh drift
     for (const s of bokeh) {
       const u = s.userData;
       s.position.x = u.basePos.x + Math.sin(now * 0.0003 + u.ph) * 4 * u.dx;
       s.position.y = u.basePos.y + Math.cos(now * 0.00025 + u.ph) * 3 * u.dy;
     }
 
-    corePoints.rotation.y = Math.sin(now * 0.00004) * 0.012;
+    corePoints.rotation.y = haloPoints.rotation.y = Math.sin(now * 0.00004) * 0.012;
 
     positionCards();
     updateHeading();
 
-    composer.render();
+    renderer.render(scene, camera);
     requestAnimationFrame(animate);
   }
   requestAnimationFrame(animate);
-  log('animate started, scene ready');
+  log('animate started');
 })();
