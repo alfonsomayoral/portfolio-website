@@ -552,9 +552,6 @@
       const t = Math.max(0, Math.min(1, (scrolled - fadeStart) / (fadeEnd - fadeStart)));
       globalCanvas.style.opacity = (1 - t).toFixed(3);
       globalCanvas.style.pointerEvents = t > 0.5 ? 'none' : '';
-      // Force dark theme once we start fading the mountain so the bundle's
-      // theme switches can't paint a white background under us.
-      if (t > 0.05) document.body.dataset.theme = 'dark';
     }
     const rect = section.getBoundingClientRect();
     const inside = rect.top <= 1 && rect.bottom >= window.innerHeight * 0.5;
