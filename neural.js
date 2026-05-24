@@ -535,15 +535,20 @@
   updateRaw();
   window.addEventListener('scroll', updateRaw, { passive: true });
 
-  // Activate body class earlier — pre-fire so the WebGL global canvas
-  // fades before the user actually reaches the neural section.
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (e.isIntersecting) document.body.classList.add('we-active');
-      else document.body.classList.remove('we-active');
-    }
-  }, { rootMargin: '50% 0px 0px 0px', threshold: 0 });
-  io.observe(section);
+  // We-active only when the neural section's top has actually reached the
+  // top of the viewport (we're inside the section). Driven from scroll so
+  // it tracks scroll, not IntersectionObserver edges — that way the global
+  // WebGL canvas (hero mountain) stays fully visible until the user has
+  // actually scrolled into the neural section.
+  function updateActiveClass() {
+    const rect = section.getBoundingClientRect();
+    const inside = rect.top <= 1 && rect.bottom >= window.innerHeight * 0.5;
+    if (inside) document.body.classList.add('we-active');
+    else document.body.classList.remove('we-active');
+  }
+  updateActiveClass();
+  window.addEventListener('scroll', updateActiveClass, { passive: true });
+  window.addEventListener('resize', updateActiveClass);
 
   // ---------- Animate ----------
   resize();
