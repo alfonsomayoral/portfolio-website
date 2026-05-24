@@ -535,12 +535,23 @@
   updateRaw();
   window.addEventListener('scroll', updateRaw, { passive: true });
 
-  // The global WebGL canvas is hidden via CSS on this page (the Trading
-  // scene bundle was failing to render the Hero mountain). The Hero uses
-  // a static mountain background image instead. We only need to drive
-  // body.we-active so the neural canvas overlay turns on when the user
-  // scrolls into the neural section.
+  // Belt-and-suspenders: fade the global WebGL canvas opacity from 1 to 0
+  // as the user scrolls through the hero. The original Oil + Metals chapter
+  // content lives in an off-screen wrapper so the WebGL bundle's
+  // IntersectionObserver shouldn't pick them up, but if anything ever did
+  // try to render after the hero it would be invisible anyway.
+  // body.we-active gates the neural-canvas overlay.
+  const heroSection = document.querySelector('section.hero, [data-chapter="Hero"]');
+  const globalCanvas = document.getElementById('canvas-wrapper');
   function updateChrome() {
+    if (heroSection && globalCanvas) {
+      const heroRect = heroSection.getBoundingClientRect();
+      const scrolledInto = Math.max(0, -heroRect.top);
+      // Fade from opacity 1 at scroll 0 to 0 at scroll = 60% of hero height
+      const t = Math.max(0, Math.min(1, scrolledInto / (heroRect.height * 0.6)));
+      globalCanvas.style.opacity = (1 - t).toFixed(3);
+      globalCanvas.style.pointerEvents = t > 0.5 ? 'none' : '';
+    }
     const rect = section.getBoundingClientRect();
     const inside = rect.top <= 1 && rect.bottom >= window.innerHeight * 0.5;
     document.body.classList.toggle('we-active', inside);
