@@ -46,10 +46,10 @@
   renderer.setClearColor(0x000814, 0);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x000814, 0.0035);
+  scene.fog = new THREE.FogExp2(0x000814, 0.0022);
 
-  const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 800);
-  camera.position.set(0, 0, 180);
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+  camera.position.set(0, 0, 200);
 
   const resize = () => {
     const w = canvas.clientWidth || window.innerWidth;
@@ -65,21 +65,29 @@
   // Colors use a cyan/blue family with two accent clusters (soft purple,
   // warm peach) so the field has variation like a real embedding atlas.
   // ------------------------------------------------------------------
+  // Cluster layout: 5 HUBS arranged in a flatter "galactic disk" pattern
+  // (all roughly z=-50 to -90) so from far view all 5 are clearly visible
+  // and distinguishable as separate clusters. Spread wider in X/Y so the
+  // galaxy reads as BIG.
+  // Plus 5 AMBIENT clusters between/around hubs for density.
   const CLUSTERS = [
-    // 5 HUBS — these are camera waypoints
-    { center: new THREE.Vector3(   0,    0,    0), color: 0x6cd2ff, count: 3800, spread: 16, isHub: true },
-    { center: new THREE.Vector3(  60,   20,  -50), color: 0xa0e0ff, count: 3200, spread: 14, isHub: true },
-    { center: new THREE.Vector3( -65,  -25,  -90), color: 0xb090e0, count: 2600, spread: 14, isHub: true }, // soft purple accent
-    { center: new THREE.Vector3(  50,  -35, -150), color: 0x8ac0ff, count: 3000, spread: 15, isHub: true },
-    { center: new THREE.Vector3( -55,   30, -210), color: 0xffb070, count: 2400, spread: 12, isHub: true }, // warm peach accent
-    // 5 AMBIENT — fill the space between hubs, smaller, no camera visit
-    { center: new THREE.Vector3(  35,  -15,  -25), color: 0x90c8ff, count: 1100, spread: 10, isHub: false },
-    { center: new THREE.Vector3( -30,   15,  -65), color: 0x7ab8ee, count: 1300, spread: 11, isHub: false },
-    { center: new THREE.Vector3(  10,   45, -120), color: 0xaccfff, count: 1000, spread: 9,  isHub: false },
-    { center: new THREE.Vector3( -45,  -10, -170), color: 0x80b8ff, count: 1200, spread: 10, isHub: false },
-    { center: new THREE.Vector3(  20,    5, -250), color: 0x9cc8ff, count: 900,  spread: 9,  isHub: false },
+    // 5 HUBS — camera waypoints, evenly spread around the disk
+    { center: new THREE.Vector3(   0,   45,  -50), color: 0x6cd2ff, count: 6000, spread: 18, isHub: true },  // top
+    { center: new THREE.Vector3( 100,    5,  -65), color: 0xa0e0ff, count: 5500, spread: 17, isHub: true },  // right
+    { center: new THREE.Vector3(  60,  -55,  -85), color: 0xb090e0, count: 5000, spread: 16, isHub: true },  // bottom-right (purple accent)
+    { center: new THREE.Vector3( -60,  -55,  -75), color: 0x8ac0ff, count: 5500, spread: 17, isHub: true },  // bottom-left
+    { center: new THREE.Vector3(-100,    5,  -55), color: 0xffb070, count: 5000, spread: 16, isHub: true },  // left (peach accent)
+    // 5 AMBIENT — fill space between hubs for density
+    { center: new THREE.Vector3(  55,   25,  -55), color: 0x90c8ff, count: 2400, spread: 13, isHub: false },
+    { center: new THREE.Vector3( -55,   25,  -60), color: 0x7ab8ee, count: 2600, spread: 14, isHub: false },
+    { center: new THREE.Vector3(  35,  -25,  -70), color: 0xaccfff, count: 2200, spread: 12, isHub: false },
+    { center: new THREE.Vector3( -35,  -25,  -65), color: 0x80b8ff, count: 2400, spread: 13, isHub: false },
+    { center: new THREE.Vector3(   0,  -10, -100), color: 0x9cc8ff, count: 2000, spread: 12, isHub: false },
   ];
   const HUBS = CLUSTERS.filter(c => c.isHub);
+
+  // Color palette used for outlier points scattered through the volume
+  const OUTLIER_PALETTE = [0x6cd2ff, 0xa0e0ff, 0xb090e0, 0x8ac0ff, 0xffb070, 0x9cc8ff, 0x80b8ff];
 
   // ------------------------------------------------------------------
   // Generate all points into a single buffer geometry.
@@ -193,6 +201,80 @@
   const galaxyPoints = new THREE.Points(pointsGeo, pointsMat);
   scene.add(galaxyPoints);
 
+  // ---------- Nebula aura: big soft halos around each hub cluster ----------
+  // Adds the "galaxy" atmospheric feel — each cluster has a low-opacity
+  // colored gas cloud around its core that bleeds into the void.
+  const nebulaSprite = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    grd.addColorStop(0.00, 'rgba(255,255,255,0.55)');
+    grd.addColorStop(0.20, 'rgba(220,240,255,0.40)');
+    grd.addColorStop(0.45, 'rgba(140,200,255,0.18)');
+    grd.addColorStop(0.75, 'rgba(60,140,220,0.05)');
+    grd.addColorStop(1.00, 'rgba(0,0,0,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return tex;
+  })();
+  for (const cl of CLUSTERS) {
+    if (!cl.isHub) continue;
+    // 2 nebula sprites per hub at slightly different scales for richer aura
+    [3.8, 5.5].forEach((scaleMul, idx) => {
+      const m = new THREE.SpriteMaterial({
+        map: nebulaSprite, color: cl.color,
+        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+        opacity: idx === 0 ? 0.22 : 0.12,
+      });
+      const s = new THREE.Sprite(m);
+      s.position.copy(cl.center);
+      s.scale.setScalar(cl.spread * scaleMul);
+      scene.add(s);
+    });
+  }
+
+  // ---------- Outlier points: ~4000 scattered random-color points ----------
+  // Distributed across the entire galaxy volume but NOT inside any cluster
+  // (skipped if too close to a hub center). Colors picked randomly from the
+  // outlier palette — gives the "data outliers" embedding-atlas feel.
+  {
+    const OUT_POS = [], OUT_COL = [], OUT_SIZ = [], OUT_PHA = [];
+    const N = 4000;
+    let placed = 0, attempts = 0;
+    while (placed < N && attempts < N * 4) {
+      attempts++;
+      const p = new THREE.Vector3(
+        (Math.random() - 0.5) * 320,    // wider X spread
+        (Math.random() - 0.5) * 180,    // wider Y spread
+        -Math.random() * 180 - 20       // z range -20 to -200
+      );
+      // Skip if inside any cluster's tight core (so outliers stay outliers)
+      let tooClose = false;
+      for (const cl of CLUSTERS) {
+        if (p.distanceTo(cl.center) < cl.spread * 1.4) { tooClose = true; break; }
+      }
+      if (tooClose) continue;
+      OUT_POS.push(p.x, p.y, p.z);
+      const c = new THREE.Color(OUTLIER_PALETTE[Math.floor(Math.random() * OUTLIER_PALETTE.length)]);
+      OUT_COL.push(c.r, c.g, c.b);
+      OUT_SIZ.push(0.5 + Math.random() * 0.7);
+      OUT_PHA.push(Math.random() * Math.PI * 2);
+      placed++;
+    }
+    log('outliers placed:', placed);
+    const outGeo = new THREE.BufferGeometry();
+    outGeo.setAttribute('position', new THREE.Float32BufferAttribute(OUT_POS, 3));
+    outGeo.setAttribute('color',    new THREE.Float32BufferAttribute(OUT_COL, 3));
+    outGeo.setAttribute('size',     new THREE.Float32BufferAttribute(OUT_SIZ, 1));
+    outGeo.setAttribute('phase',    new THREE.Float32BufferAttribute(OUT_PHA, 1));
+    // Reuse the same shader material (shares uTime uniform) by cloning
+    const outMat = pointsMat.clone();
+    outMat.uniforms = pointsMat.uniforms; // share uniforms so time + sprite are the same instance
+    scene.add(new THREE.Points(outGeo, outMat));
+  }
+
   // ---------- Far stardust backdrop ----------
   {
     const N = 1500;
@@ -219,10 +301,10 @@
   // ------------------------------------------------------------------
   // Camera path: approach + 5 hub visits + transits + exit
   // ------------------------------------------------------------------
-  // Initial camera at z=110 so the user sees the galaxy clearly in its
-  // totality from the start (was z=180 — too far, clusters looked like
-  // tiny faint sparkles).
-  const FAR_START = new THREE.Vector3(0, 0, 110);
+  // Initial camera pulled back to z=160 to fit the much wider galaxy
+  // (now X spread ±100 + nebula halos extending further) and clearly
+  // show all 5 hub clusters distinct from each other.
+  const FAR_START = new THREE.Vector3(0, 0, 160);
 
   // Per-hub presets: how the camera orbits each hub cluster
   // outR  = distance from hub along outward direction (toward camera)
