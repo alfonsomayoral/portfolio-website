@@ -22,7 +22,7 @@
 
 (async function () {
   const log = (...a) => console.log('[neural]', ...a);
-  log('boot v12 immersive-galaxy');
+  log('boot v13 wider-galaxy park-transit');
 
   if (document.readyState === 'loading') {
     await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
@@ -51,7 +51,7 @@
   scene.fog = new THREE.FogExp2(0x000814, 0.0017);
 
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1200);
-  camera.position.set(0, 0, 130);
+  camera.position.set(0, 0, 140);
 
   const resize = () => {
     const w = canvas.clientWidth || window.innerWidth;
@@ -82,33 +82,41 @@
   };
 
   const CLUSTERS = [
-    // 5 HUBS — close galactic disk (camera waypoints + card anchors)
-    { center: new THREE.Vector3(   0,   32, -52), color: HUB_COLORS.lightBlue, count: 10000, spread: 17, isHub: true,
+    // 5 HUBS — wider galactic disk (X +-75, Y +-42) so galaxy fills screen
+    { center: new THREE.Vector3(   0,   42, -45), color: HUB_COLORS.lightBlue, count: 10500, spread: 18, isHub: true,
       sigma: new THREE.Vector3(1.40, 0.75, 0.95), rotZ:  0.45 },
-    { center: new THREE.Vector3(  60,    8, -66), color: HUB_COLORS.green,     count:  9500, spread: 17, isHub: true,
+    { center: new THREE.Vector3(  75,   10, -65), color: HUB_COLORS.green,     count: 10000, spread: 18, isHub: true,
       sigma: new THREE.Vector3(0.85, 1.45, 0.90), rotZ: -0.30 },
-    { center: new THREE.Vector3(  38,  -32, -78), color: HUB_COLORS.purple,    count:  9000, spread: 16, isHub: true,
+    { center: new THREE.Vector3(  48,  -42, -80), color: HUB_COLORS.purple,    count:  9500, spread: 17, isHub: true,
       sigma: new THREE.Vector3(0.80, 1.25, 1.35), rotZ:  0.60 },
-    { center: new THREE.Vector3( -38,  -32, -70), color: HUB_COLORS.darkBlue,  count:  9500, spread: 16, isHub: true,
+    { center: new THREE.Vector3( -48,  -42, -70), color: HUB_COLORS.darkBlue,  count:  9500, spread: 17, isHub: true,
       sigma: new THREE.Vector3(1.55, 0.90, 0.80), rotZ: -0.55 },
-    { center: new THREE.Vector3( -60,    8, -56), color: HUB_COLORS.orange,    count:  9000, spread: 17, isHub: true,
+    { center: new THREE.Vector3( -75,   10, -55), color: HUB_COLORS.orange,    count:  9500, spread: 18, isHub: true,
       sigma: new THREE.Vector3(0.90, 1.20, 1.35), rotZ:  0.20 },
 
-    // CENTRAL CORE — fills the void in the middle of the constellation
-    { center: new THREE.Vector3(   0,    0, -72), color: 0xc8cce0,             count:  6500, spread: 24, isHub: false,
+    // CENTRAL CORE — larger and denser, anchors the middle of constellation
+    { center: new THREE.Vector3(   0,    0, -72), color: 0xc8cce0,             count: 10000, spread: 32, isHub: false,
       sigma: new THREE.Vector3(1.30, 1.00, 1.15), rotZ:  0.0  },
 
-    // 5 AMBIENT — fill space between hubs with irregular shapes
-    { center: new THREE.Vector3(  30,   20, -55), color: 0x90d4ff,             count:  3800, spread: 15, isHub: false,
+    // 5 PRIMARY AMBIENT — fill space between hubs
+    { center: new THREE.Vector3(  38,   25, -52), color: 0x90d4ff,             count:  4500, spread: 16, isHub: false,
       sigma: new THREE.Vector3(1.60, 0.70, 0.90), rotZ:  0.35 },
-    { center: new THREE.Vector3( -30,   20, -60), color: 0x90e0b8,             count:  3800, spread: 15, isHub: false,
+    { center: new THREE.Vector3( -38,   25, -58), color: 0x90e0b8,             count:  4500, spread: 16, isHub: false,
       sigma: new THREE.Vector3(0.70, 1.50, 1.10), rotZ: -0.40 },
-    { center: new THREE.Vector3(  18,  -10, -85), color: 0xb098ee,             count:  3500, spread: 14, isHub: false,
+    { center: new THREE.Vector3(  22,  -10, -82), color: 0xb098ee,             count:  4000, spread: 15, isHub: false,
       sigma: new THREE.Vector3(1.20, 1.00, 0.80), rotZ:  0.10 },
-    { center: new THREE.Vector3( -18,  -18, -80), color: 0x5880d8,             count:  3500, spread: 14, isHub: false,
+    { center: new THREE.Vector3( -22,  -18, -78), color: 0x5880d8,             count:  4000, spread: 15, isHub: false,
       sigma: new THREE.Vector3(0.85, 0.90, 1.40), rotZ: -0.25 },
-    { center: new THREE.Vector3(   8,   -2, -98), color: 0xf0a070,             count:  3200, spread: 13, isHub: false,
+    { center: new THREE.Vector3(  10,   -2, -98), color: 0xf0a070,             count:  3500, spread: 14, isHub: false,
       sigma: new THREE.Vector3(1.70, 0.80, 0.95), rotZ:  0.55 },
+
+    // 3 ADDITIONAL FILLER CLUSTERS — boost density in inter-hub bridges
+    { center: new THREE.Vector3(  55,   28, -60), color: 0x88d8c8,             count:  3500, spread: 14, isHub: false,
+      sigma: new THREE.Vector3(1.30, 0.95, 1.10), rotZ:  0.25 },   // bridge hub0<->hub1
+    { center: new THREE.Vector3( -55,   28, -60), color: 0xd0a888,             count:  3500, spread: 14, isHub: false,
+      sigma: new THREE.Vector3(0.95, 1.30, 1.10), rotZ: -0.20 },   // bridge hub0<->hub4
+    { center: new THREE.Vector3(   0,  -48, -78), color: 0x7068d0,             count:  3500, spread: 14, isHub: false,
+      sigma: new THREE.Vector3(1.50, 0.80, 1.00), rotZ:  0.40 },   // bridge hub2<->hub3
   ];
   const HUBS = CLUSTERS.filter(c => c.isHub);
   const GALAXY_CENTER = new THREE.Vector3(0, 0, -72);
@@ -261,25 +269,25 @@
   scene.add(galaxyPoints);
 
   // ------------------------------------------------------------------
-  // BACKGROUND FIELD — ~35,000 points across a broad ellipsoid.
-  //   r^0.55 radial bias = HIGH density at center (was inverted in v11).
-  //   Ellipsoid: 175 wide × 110 tall × 95 deep, centered at galaxy core.
-  //   Bright bias toward center too so the heart of the galaxy glows.
+  // BACKGROUND FIELD — ~45,000 points across a wide ellipsoid that
+  // covers the full screen width when seen from the approach camera.
+  //   r^0.50 radial bias = even higher density at center.
+  //   Ellipsoid: 220 wide × 140 tall × 110 deep.
   // ------------------------------------------------------------------
   {
     const BG_POS = [], BG_COL = [], BG_SIZ = [], BG_PHA = [];
-    const N = 35000;
+    const N = 45000;
     for (let i = 0; i < N; i++) {
       // Uniform direction on sphere
       const u = Math.random() * 2 - 1;
       const phi = Math.random() * Math.PI * 2;
       const s = Math.sqrt(1 - u * u);
-      // Radial bias INWARD: r = pow(rand, 0.55) makes density rise toward center
-      const r = Math.pow(Math.random(), 0.55);
+      // Radial bias INWARD: r = pow(rand, 0.50) makes density rise toward center
+      const r = Math.pow(Math.random(), 0.50);
 
-      const px = r * 175 * s * Math.cos(phi);
-      const py = r * 110 * s * Math.sin(phi);
-      const pz = GALAXY_CENTER.z + r * 95 * u;
+      const px = r * 220 * s * Math.cos(phi);
+      const py = r * 140 * s * Math.sin(phi);
+      const pz = GALAXY_CENTER.z + r * 110 * u;
       BG_POS.push(px, py, pz);
 
       const col = new THREE.Color(PALETTE[Math.floor(Math.random() * PALETTE.length)]);
@@ -328,59 +336,91 @@
   }
 
   // ------------------------------------------------------------------
-  // CAMERA PATH — Catmull-Rom curve through 12 waypoints.
-  // Each hub gets an ENTER and an EXIT waypoint on opposite sides so
-  // the segment between them passes THROUGH (or very close to) the
-  // cluster core. Transit segments between hubs traverse the galaxy
-  // at varied angles, planes and distances — never the same plane twice.
+  // CAMERA PATH — Catmull-Rom curve through 17 waypoints.
+  // Park-and-transit structure:
+  //   - Each hub has a visit-start + visit-end pair CLOSE together
+  //     (camera barely drifts during card display).
+  //   - Each transit has a MIDPOINT waypoint pulled toward galaxy center
+  //     so the camera dives through the dense middle on its way to the
+  //     next hub. Movement is concentrated in the transit phases.
+  // Total: 17 WP -> 16 segments. 11 STATIONS -> 16 segs (visits=1seg,
+  // transits=2segs, exit=2segs).
   // ------------------------------------------------------------------
   const WAYPOINTS = [
-    new THREE.Vector3(   0,    0,  130),  //  0  far approach start
-    new THREE.Vector3(  40,   55,  -10),  //  1  hub 0 enter (front-top-right)
-    new THREE.Vector3( -40,   15,  -85),  //  2  hub 0 exit  (back-left, dipping)
-    new THREE.Vector3(  90,  -10,  -30),  //  3  hub 1 enter (front-right)
-    new THREE.Vector3(  30,   25, -100),  //  4  hub 1 exit  (deep back, left of hub)
-    new THREE.Vector3(  60,  -10,  -45),  //  5  hub 2 enter (front-above)
-    new THREE.Vector3(  15,  -55, -110),  //  6  hub 2 exit  (deep back, below)
-    new THREE.Vector3(  -5,  -65,  -45),  //  7  hub 3 enter (front-below)
-    new THREE.Vector3( -70,    0,  -95),  //  8  hub 3 exit  (back-upper-left)
-    new THREE.Vector3( -90,  -10,  -25),  //  9  hub 4 enter (front-far-left)
-    new THREE.Vector3( -30,   25,  -90),  // 10  hub 4 exit  (back, slightly right)
-    new THREE.Vector3(  15,    5,  100),  // 11  final pull-back
+    new THREE.Vector3(   0,    0,  140),  //  0  far approach start
+
+    new THREE.Vector3(  22,   65,    8),  //  1  hub 0 visit-start (parked outside hub 0)
+    new THREE.Vector3(   8,   60,    0),  //  2  hub 0 visit-end (small drift)
+
+    new THREE.Vector3(  38,   28,  -45),  //  3  transit 0->1 midpoint (dive toward center)
+
+    new THREE.Vector3(  98,   22,  -30),  //  4  hub 1 visit-start
+    new THREE.Vector3(  92,   14,  -22),  //  5  hub 1 visit-end
+
+    new THREE.Vector3(  62,  -18,  -58),  //  6  transit 1->2 midpoint
+
+    new THREE.Vector3(  72,  -58,  -45),  //  7  hub 2 visit-start
+    new THREE.Vector3(  64,  -52,  -38),  //  8  hub 2 visit-end
+
+    new THREE.Vector3(   0,  -52,  -92),  //  9  transit 2->3 midpoint (deep dive below center)
+
+    new THREE.Vector3( -72,  -58,  -45),  // 10  hub 3 visit-start
+    new THREE.Vector3( -64,  -52,  -38),  // 11  hub 3 visit-end
+
+    new THREE.Vector3( -48,   -2,  -55),  // 12  transit 3->4 midpoint
+
+    new THREE.Vector3( -98,   22,  -30),  // 13  hub 4 visit-start
+    new THREE.Vector3( -92,   14,  -22),  // 14  hub 4 visit-end
+
+    new THREE.Vector3( -38,   12,   25),  // 15  exit midpoint (pull back rising)
+    new THREE.Vector3(  10,    0,  130),  // 16  final far position
   ];
-  const positionCurve = new THREE.CatmullRomCurve3(WAYPOINTS, false, 'catmullrom', 0.4);
+  // Catmull-Rom with tension 0.5 (default) for smooth C1 transitions across segments
+  const positionCurve = new THREE.CatmullRomCurve3(WAYPOINTS, false, 'catmullrom', 0.5);
 
   function smoothStep(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
 
-  // 11 STATIONS = 11 curve segments. Each station maps to exactly one segment.
+  // 11 STATIONS mapping into 16 curve segments.
+  //   visits = 1 segment each (small drift = barely any motion)
+  //   transits = 2 segments each (long traverse through galaxy center)
+  //   approach = 1 segment, exit = 2 segments
+  // Scroll allocation favors equal time per station, but transits cover
+  // much more curve distance -> camera moves fast during transits, slow
+  // during visits = "rest at hubs, fly between them" feel.
   const STATIONS = [
-    { type: 'approach', range: [0.00, 0.10] },                     // seg 0  (WP0 -> WP1)
-    { type: 'visit',    range: [0.10, 0.24], hub: 0 },             // seg 1  (WP1 -> WP2)
-    { type: 'transit',  range: [0.24, 0.30], from: 0, to: 1 },     // seg 2  (WP2 -> WP3)
-    { type: 'visit',    range: [0.30, 0.44], hub: 1 },             // seg 3  (WP3 -> WP4)
-    { type: 'transit',  range: [0.44, 0.50], from: 1, to: 2 },     // seg 4  (WP4 -> WP5)
-    { type: 'visit',    range: [0.50, 0.64], hub: 2 },             // seg 5  (WP5 -> WP6)
-    { type: 'transit',  range: [0.64, 0.70], from: 2, to: 3 },     // seg 6  (WP6 -> WP7)
-    { type: 'visit',    range: [0.70, 0.84], hub: 3 },             // seg 7  (WP7 -> WP8)
-    { type: 'transit',  range: [0.84, 0.90], from: 3, to: 4 },     // seg 8  (WP8 -> WP9)
-    { type: 'visit',    range: [0.90, 0.97], hub: 4 },             // seg 9  (WP9 -> WP10)
-    { type: 'exit',     range: [0.97, 1.00] },                     // seg 10 (WP10 -> WP11)
+    { type: 'approach', range: [0.00, 0.06], startU:  0/16, endU:  1/16 },
+    { type: 'visit',    range: [0.06, 0.16], hub: 0, startU:  1/16, endU:  2/16 },
+    { type: 'transit',  range: [0.16, 0.26], from: 0, to: 1, startU:  2/16, endU:  4/16 },
+    { type: 'visit',    range: [0.26, 0.36], hub: 1, startU:  4/16, endU:  5/16 },
+    { type: 'transit',  range: [0.36, 0.46], from: 1, to: 2, startU:  5/16, endU:  7/16 },
+    { type: 'visit',    range: [0.46, 0.56], hub: 2, startU:  7/16, endU:  8/16 },
+    { type: 'transit',  range: [0.56, 0.66], from: 2, to: 3, startU:  8/16, endU: 10/16 },
+    { type: 'visit',    range: [0.66, 0.76], hub: 3, startU: 10/16, endU: 11/16 },
+    { type: 'transit',  range: [0.76, 0.86], from: 3, to: 4, startU: 11/16, endU: 13/16 },
+    { type: 'visit',    range: [0.86, 0.96], hub: 4, startU: 13/16, endU: 14/16 },
+    { type: 'exit',     range: [0.96, 1.00], startU: 14/16, endU: 16/16 },
   ];
 
+  // Quintic smoothstep — flatter derivative at endpoints than cubic,
+  // gives more "easing into rest" feel at station boundaries.
+  function smoothStep5(x) {
+    x = Math.max(0, Math.min(1, x));
+    return x * x * x * (x * (x * 6 - 15) + 10);
+  }
+
   function cameraAt(p) {
-    const stIdx = (() => {
-      for (let i = 0; i < STATIONS.length; i++) {
-        const r = STATIONS[i].range;
-        if (p >= r[0] && p < r[1]) return i;
-      }
-      return STATIONS.length - 1;
-    })();
+    let stIdx = STATIONS.length - 1;
+    for (let i = 0; i < STATIONS.length; i++) {
+      const r = STATIONS[i].range;
+      if (p >= r[0] && p < r[1]) { stIdx = i; break; }
+    }
     const st = STATIONS[stIdx];
     const localP = (p - st.range[0]) / (st.range[1] - st.range[0]);
-    const eased = smoothStep(localP);
+    // Use quintic for visits (super smooth park) and cubic for transits (responsive)
+    const eased = st.type === 'visit' ? smoothStep5(localP) : smoothStep(localP);
 
-    // Position via Catmull-Rom curve — uniform u across all 11 segments
-    const segU = (stIdx + eased) / STATIONS.length;
+    // Position via Catmull-Rom curve
+    const segU = st.startU + (st.endU - st.startU) * eased;
     const pos = positionCurve.getPoint(Math.max(0, Math.min(1, segU)));
 
     // LookAt by station type
@@ -509,8 +549,9 @@
     smoothProgress += (rawProgress - smoothProgress) * 0.07;
 
     const { pos, look } = cameraAt(smoothProgress);
-    pos.x += Math.sin(now * 0.0004) * 0.3;
-    pos.y += Math.cos(now * 0.0003) * 0.2;
+    // Subtle per-frame wobble (reduced amplitude so visits feel still)
+    pos.x += Math.sin(now * 0.0004) * 0.15;
+    pos.y += Math.cos(now * 0.0003) * 0.10;
     camera.position.copy(pos);
     camera.lookAt(look);
 
