@@ -1,26 +1,22 @@
-/* Neural section — v10 galaxy embedding clusters.
+/* Neural section — v11 unified Milky-Way galaxy.
 
-   Complete redesign per user feedback. Out: icosahedron with lines.
-   In: a vast field of POINTS organized in distinct embedding-style
-   clusters, like a 2D-projection atlas of a high-dim embedding (think
-   the Nomic/Atlas tool) translated to 3D space.
-
-   - 10 clusters, gaussian-distributed, ~22,000 points total.
-   - 5 of them act as hub waypoints for the camera tour + card anchors.
-   - ZERO lines — only points. Each point has size + color + phase.
-   - Subtle per-point sine motion via custom vertex shader (time uniform
-     + per-point random phase) so the field is constantly breathing.
-   - Camera starts at z=+180 with the whole galaxy visible, then
-     scroll-drives the camera through the 5 hub clusters in sequence.
-   - Each cluster has its own color tint (mostly cyan/blue family, two
-     accent clusters in soft purple and warm peach for variety).
-   - Far stardust backdrop adds depth.
-
-   Mountain hero canvas fade and inline body bg navy are unchanged. */
+   Refines v10 per user feedback:
+   - ONE continuous galaxy. Adds an 18,000-point background field that
+     fills the entire volume so there's never a "gap" between hubs.
+   - 5 hubs brought closer together (X ±60, Y ±32) so they read as one
+     constellation, not 5 isolated balls.
+   - Cluster shapes are anisotropic + Z-rotated so none are perfect
+     spheres — each hub has its own stretched/tilted blob shape.
+   - Nebula aura is now ~7 small offset puffs per hub + inter-hub bridge
+     puffs, all with random rotations and varied opacities, so the auras
+     fuse together with no visible circular boundary.
+   - All other v10 behavior intact: camera tour through 5 hubs, cards
+     anchored to hub screen projection, per-point sine drift shader,
+     mountain hero + body bg navy transition. */
 
 (async function () {
   const log = (...a) => console.log('[neural]', ...a);
-  log('boot v10 galaxy');
+  log('boot v11 unified-galaxy');
 
   if (document.readyState === 'loading') {
     await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
@@ -46,10 +42,10 @@
   renderer.setClearColor(0x000814, 0);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x000814, 0.0022);
+  scene.fog = new THREE.FogExp2(0x000814, 0.0020);
 
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-  camera.position.set(0, 0, 200);
+  camera.position.set(0, 0, 160);
 
   const resize = () => {
     const w = canvas.clientWidth || window.innerWidth;
@@ -60,39 +56,43 @@
   };
 
   // ------------------------------------------------------------------
-  // Cluster definitions. 5 hubs (indices 0..4) + 5 ambient clusters.
-  // Positions are spread through a ~200x100x300 volume.
-  // Colors use a cyan/blue family with two accent clusters (soft purple,
-  // warm peach) so the field has variation like a real embedding atlas.
+  // Cluster definitions — 5 HUBS + 5 AMBIENT, all with anisotropic
+  // sigma + Z rotation so shapes are irregular (no perfect spheres).
+  // Hub centers brought close together (X ±60, Y ±32, Z -50..-78) so
+  // the 5 nuclei read as ONE constellation, not 5 separate balls.
   // ------------------------------------------------------------------
-  // Cluster layout: 5 HUBS arranged in a flatter "galactic disk" pattern
-  // (all roughly z=-50 to -90) so from far view all 5 are clearly visible
-  // and distinguishable as separate clusters. Spread wider in X/Y so the
-  // galaxy reads as BIG.
-  // Plus 5 AMBIENT clusters between/around hubs for density.
   const CLUSTERS = [
-    // 5 HUBS — camera waypoints, evenly spread around the disk
-    { center: new THREE.Vector3(   0,   45,  -50), color: 0x6cd2ff, count: 6000, spread: 18, isHub: true },  // top
-    { center: new THREE.Vector3( 100,    5,  -65), color: 0xa0e0ff, count: 5500, spread: 17, isHub: true },  // right
-    { center: new THREE.Vector3(  60,  -55,  -85), color: 0xb090e0, count: 5000, spread: 16, isHub: true },  // bottom-right (purple accent)
-    { center: new THREE.Vector3( -60,  -55,  -75), color: 0x8ac0ff, count: 5500, spread: 17, isHub: true },  // bottom-left
-    { center: new THREE.Vector3(-100,    5,  -55), color: 0xffb070, count: 5000, spread: 16, isHub: true },  // left (peach accent)
-    // 5 AMBIENT — fill space between hubs for density
-    { center: new THREE.Vector3(  55,   25,  -55), color: 0x90c8ff, count: 2400, spread: 13, isHub: false },
-    { center: new THREE.Vector3( -55,   25,  -60), color: 0x7ab8ee, count: 2600, spread: 14, isHub: false },
-    { center: new THREE.Vector3(  35,  -25,  -70), color: 0xaccfff, count: 2200, spread: 12, isHub: false },
-    { center: new THREE.Vector3( -35,  -25,  -65), color: 0x80b8ff, count: 2400, spread: 13, isHub: false },
-    { center: new THREE.Vector3(   0,  -10, -100), color: 0x9cc8ff, count: 2000, spread: 12, isHub: false },
+    // 5 HUBS — close galactic disk, camera waypoints
+    { center: new THREE.Vector3(   0,   32, -52), color: 0x6cd2ff, count: 5500, spread: 16, isHub: true,
+      sigma: new THREE.Vector3(1.35, 0.75, 0.95), rotZ:  0.45 },                       // top — cyan, wide
+    { center: new THREE.Vector3(  60,    8, -66), color: 0xa0e0ff, count: 5200, spread: 16, isHub: true,
+      sigma: new THREE.Vector3(0.85, 1.40, 0.90), rotZ: -0.30 },                       // right — pale, vertical
+    { center: new THREE.Vector3(  38,  -32, -78), color: 0xb090e0, count: 4800, spread: 15, isHub: true,
+      sigma: new THREE.Vector3(0.80, 1.20, 1.30), rotZ:  0.60 },                       // bottom-right — purple, tilted
+    { center: new THREE.Vector3( -38,  -32, -70), color: 0x8ac0ff, count: 5000, spread: 15, isHub: true,
+      sigma: new THREE.Vector3(1.50, 0.90, 0.80), rotZ: -0.55 },                       // bottom-left — long streak
+    { center: new THREE.Vector3( -60,    8, -56), color: 0xffb070, count: 4800, spread: 16, isHub: true,
+      sigma: new THREE.Vector3(0.90, 1.20, 1.30), rotZ:  0.20 },                       // left — peach, soft
+    // 5 AMBIENT — fill space between hubs with irregular shapes
+    { center: new THREE.Vector3(  30,   20, -55), color: 0x90c8ff, count: 2200, spread: 14, isHub: false,
+      sigma: new THREE.Vector3(1.60, 0.70, 0.90), rotZ:  0.35 },
+    { center: new THREE.Vector3( -30,   20, -60), color: 0x7ab8ee, count: 2200, spread: 14, isHub: false,
+      sigma: new THREE.Vector3(0.70, 1.50, 1.10), rotZ: -0.40 },
+    { center: new THREE.Vector3(  10,  -12, -88), color: 0xaccfff, count: 2000, spread: 13, isHub: false,
+      sigma: new THREE.Vector3(1.20, 1.00, 0.80), rotZ:  0.10 },
+    { center: new THREE.Vector3( -12,  -18, -82), color: 0x80b8ff, count: 2000, spread: 13, isHub: false,
+      sigma: new THREE.Vector3(0.85, 0.90, 1.40), rotZ: -0.25 },
+    { center: new THREE.Vector3(   0,    0, -98), color: 0x9cc8ff, count: 1800, spread: 12, isHub: false,
+      sigma: new THREE.Vector3(1.70, 0.80, 0.95), rotZ:  0.55 },
   ];
   const HUBS = CLUSTERS.filter(c => c.isHub);
 
-  // Color palette used for outlier points scattered through the volume
-  const OUTLIER_PALETTE = [0x6cd2ff, 0xa0e0ff, 0xb090e0, 0x8ac0ff, 0xffb070, 0x9cc8ff, 0x80b8ff];
+  // Color palette for the continuous background field
+  const PALETTE = [0x6cd2ff, 0xa0e0ff, 0xb090e0, 0x8ac0ff, 0xffb070, 0x9cc8ff, 0x80b8ff, 0xc0e8ff];
 
   // ------------------------------------------------------------------
-  // Generate all points into a single buffer geometry.
-  // Each point: position(3) + color(3) + size(1) + phase(1).
-  // Gaussian distribution around cluster center for organic blob shapes.
+  // Generate cluster points with anisotropic gaussian + Z rotation.
+  // Adds occasional "filament" stretching for non-uniform tails.
   // ------------------------------------------------------------------
   const POS = [], COL = [], SIZ = [], PHA = [];
 
@@ -105,32 +105,39 @@
 
   for (const cl of CLUSTERS) {
     const baseColor = new THREE.Color(cl.color);
+    const cosR = Math.cos(cl.rotZ), sinR = Math.sin(cl.rotZ);
     for (let i = 0; i < cl.count; i++) {
-      const p = new THREE.Vector3(
-        cl.center.x + gauss(cl.spread),
-        cl.center.y + gauss(cl.spread * 0.7),
-        cl.center.z + gauss(cl.spread)
-      );
+      // Anisotropic gaussian
+      let gx = gauss(cl.spread * cl.sigma.x);
+      let gy = gauss(cl.spread * cl.sigma.y);
+      let gz = gauss(cl.spread * cl.sigma.z);
+      // Occasional filament — stretches some points far along an axis
+      if (Math.random() < 0.07) {
+        const ax = Math.random();
+        if      (ax < 0.34) gx *= 1.4 + Math.random() * 1.6;
+        else if (ax < 0.67) gy *= 1.4 + Math.random() * 1.6;
+        else                gz *= 1.4 + Math.random() * 1.2;
+      }
+      // Rotate around Z to break axis-aligned look
+      const rx = gx * cosR - gy * sinR;
+      const ry = gx * sinR + gy * cosR;
+      const p = new THREE.Vector3(cl.center.x + rx, cl.center.y + ry, cl.center.z + gz);
       POS.push(p.x, p.y, p.z);
 
-      // Color: mostly cluster color, occasional hot-white core
       const whiteAmount = Math.random() < 0.06 ? 0.7 : Math.random() * 0.35;
       const c = baseColor.clone().lerp(new THREE.Color(0xffffff), whiteAmount);
       COL.push(c.r, c.g, c.b);
 
-      // Size: most small dust, a few big bright stars
-      // distance from cluster center → smaller outside
-      const distNorm = Math.min(1, p.distanceTo(cl.center) / cl.spread);
+      // Soft falloff so cluster edges fade smoothly into background field
+      const distNorm = Math.min(1, p.distanceTo(cl.center) / (cl.spread * 1.4));
       const baseS = cl.isHub ? 2.4 : 1.6;
-      // mostly small, occasional bigger
       const sizeMul = Math.random() < 0.08 ? 1.8 : (0.4 + Math.random() * 0.7);
-      SIZ.push(baseS * sizeMul * (1 - distNorm * 0.6));
+      SIZ.push(baseS * sizeMul * (1 - distNorm * 0.5));
 
-      // Phase: per-point random offset for motion
       PHA.push(Math.random() * Math.PI * 2);
     }
   }
-  log('built', POS.length / 3, 'points across', CLUSTERS.length, 'clusters');
+  log('built', POS.length / 3, 'cluster points across', CLUSTERS.length, 'clusters');
 
   // ---------- Point sprite (soft round) ----------
   const pointSprite = (() => {
@@ -169,7 +176,6 @@
       void main() {
         vColor = color;
         vec3 pos = position;
-        // Subtle per-point sine drift — very small, just enough to feel alive
         float wave = sin(uTime * 0.35 + phase);
         pos.x += wave * 0.20;
         pos.y += cos(uTime * 0.40 + phase * 1.6) * 0.18;
@@ -178,8 +184,7 @@
         vec4 mv = modelViewMatrix * vec4(pos, 1.0);
         gl_Position = projectionMatrix * mv;
         gl_PointSize = size * 280.0 / -mv.z;
-        // Soft attenuation for very distant points so they don't twinkle harshly
-        vAlpha = clamp(1.0 - (-mv.z) / 500.0, 0.0, 1.0);
+        vAlpha = clamp(1.0 - (-mv.z) / 520.0, 0.0, 1.0);
       }
     `,
     fragmentShader: `
@@ -201,78 +206,117 @@
   const galaxyPoints = new THREE.Points(pointsGeo, pointsMat);
   scene.add(galaxyPoints);
 
-  // ---------- Nebula aura: big soft halos around each hub cluster ----------
-  // Adds the "galaxy" atmospheric feel — each cluster has a low-opacity
-  // colored gas cloud around its core that bleeds into the void.
+  // ------------------------------------------------------------------
+  // BACKGROUND FIELD — 18,000 points spread across entire volume.
+  // This is the key change for "infinity of points everywhere" so the
+  // 5 hubs no longer read as isolated balls. Low brightness, small size,
+  // light density bias toward galactic center via power law.
+  // ------------------------------------------------------------------
+  {
+    const BG_POS = [], BG_COL = [], BG_SIZ = [], BG_PHA = [];
+    const N = 18000;
+    for (let i = 0; i < N; i++) {
+      // Ellipsoidal galaxy volume centered at z=-75, broad XY
+      // Slight power bias so density rises toward center (more visually galaxy-like).
+      const cx = (Math.random() * 2 - 1);
+      const cy = (Math.random() * 2 - 1);
+      const cz = (Math.random() * 2 - 1);
+      const r2 = cx*cx + cy*cy + cz*cz;
+      // bias points slightly inward (keep but skew)
+      const bias = 1 - 0.18 * Math.max(0, 1 - r2);
+      const px = cx * 130 * bias;
+      const py = cy *  80 * bias;
+      const pz = -75 + cz * 75 * bias;
+      BG_POS.push(px, py, pz);
+      const col = new THREE.Color(PALETTE[Math.floor(Math.random() * PALETTE.length)]);
+      // dim background field — between 0.35 and 0.7 brightness
+      const dim = 0.35 + Math.random() * 0.35;
+      BG_COL.push(col.r * dim, col.g * dim, col.b * dim);
+      // Mostly tiny; occasional brighter speck
+      const sz = Math.random() < 0.04 ? 1.1 + Math.random() * 0.6 : 0.35 + Math.random() * 0.55;
+      BG_SIZ.push(sz);
+      BG_PHA.push(Math.random() * Math.PI * 2);
+    }
+    const bgGeo = new THREE.BufferGeometry();
+    bgGeo.setAttribute('position', new THREE.Float32BufferAttribute(BG_POS, 3));
+    bgGeo.setAttribute('color',    new THREE.Float32BufferAttribute(BG_COL, 3));
+    bgGeo.setAttribute('size',     new THREE.Float32BufferAttribute(BG_SIZ, 1));
+    bgGeo.setAttribute('phase',    new THREE.Float32BufferAttribute(BG_PHA, 1));
+    const bgMat = pointsMat.clone();
+    bgMat.uniforms = pointsMat.uniforms; // share uTime + sprite
+    scene.add(new THREE.Points(bgGeo, bgMat));
+    log('background field placed:', N);
+  }
+
+  // ------------------------------------------------------------------
+  // NEBULA — irregular puffs per hub + inter-hub bridge puffs.
+  // No more 2 big circular halos: instead 7 small randomly-offset puffs
+  // per hub at varied scales + rotations, plus 4 puffs along each
+  // hub-to-hub axis. Result: blended diffuse aura with no clear edge.
+  // ------------------------------------------------------------------
   const nebulaSprite = (() => {
     const c = document.createElement('canvas');
     c.width = c.height = 256;
     const g = c.getContext('2d');
     const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
     grd.addColorStop(0.00, 'rgba(255,255,255,0.55)');
-    grd.addColorStop(0.20, 'rgba(220,240,255,0.40)');
-    grd.addColorStop(0.45, 'rgba(140,200,255,0.18)');
-    grd.addColorStop(0.75, 'rgba(60,140,220,0.05)');
+    grd.addColorStop(0.20, 'rgba(220,240,255,0.38)');
+    grd.addColorStop(0.45, 'rgba(140,200,255,0.16)');
+    grd.addColorStop(0.75, 'rgba(60,140,220,0.04)');
     grd.addColorStop(1.00, 'rgba(0,0,0,0)');
     g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
     const tex = new THREE.CanvasTexture(c);
     tex.needsUpdate = true;
     return tex;
   })();
+
+  // Per-hub puffs
   for (const cl of CLUSTERS) {
     if (!cl.isHub) continue;
-    // 2 nebula sprites per hub at slightly different scales for richer aura
-    [3.8, 5.5].forEach((scaleMul, idx) => {
+    const PUFFS = 7;
+    for (let i = 0; i < PUFFS; i++) {
+      const offset = new THREE.Vector3(
+        gauss(cl.spread * 0.95),
+        gauss(cl.spread * 0.85),
+        gauss(cl.spread * 0.45)
+      );
+      const scaleMul = 1.7 + Math.random() * 2.8; // 1.7x..4.5x spread
+      const opacity = 0.05 + Math.random() * 0.14;
       const m = new THREE.SpriteMaterial({
         map: nebulaSprite, color: cl.color,
         transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
-        opacity: idx === 0 ? 0.22 : 0.12,
+        opacity: opacity,
+        rotation: Math.random() * Math.PI * 2,
       });
       const s = new THREE.Sprite(m);
-      s.position.copy(cl.center);
+      s.position.copy(cl.center).add(offset);
       s.scale.setScalar(cl.spread * scaleMul);
       scene.add(s);
-    });
+    }
   }
 
-  // ---------- Outlier points: ~4000 scattered random-color points ----------
-  // Distributed across the entire galaxy volume but NOT inside any cluster
-  // (skipped if too close to a hub center). Colors picked randomly from the
-  // outlier palette — gives the "data outliers" embedding-atlas feel.
-  {
-    const OUT_POS = [], OUT_COL = [], OUT_SIZ = [], OUT_PHA = [];
-    const N = 4000;
-    let placed = 0, attempts = 0;
-    while (placed < N && attempts < N * 4) {
-      attempts++;
-      const p = new THREE.Vector3(
-        (Math.random() - 0.5) * 320,    // wider X spread
-        (Math.random() - 0.5) * 180,    // wider Y spread
-        -Math.random() * 180 - 20       // z range -20 to -200
-      );
-      // Skip if inside any cluster's tight core (so outliers stay outliers)
-      let tooClose = false;
-      for (const cl of CLUSTERS) {
-        if (p.distanceTo(cl.center) < cl.spread * 1.4) { tooClose = true; break; }
-      }
-      if (tooClose) continue;
-      OUT_POS.push(p.x, p.y, p.z);
-      const c = new THREE.Color(OUTLIER_PALETTE[Math.floor(Math.random() * OUTLIER_PALETTE.length)]);
-      OUT_COL.push(c.r, c.g, c.b);
-      OUT_SIZ.push(0.5 + Math.random() * 0.7);
-      OUT_PHA.push(Math.random() * Math.PI * 2);
-      placed++;
+  // Inter-hub bridge puffs — make adjacent auras merge
+  const HUB_PAIRS = [[0,1],[1,2],[2,3],[3,4],[4,0],[0,2],[1,3],[2,4],[0,3]];
+  for (const [a, b] of HUB_PAIRS) {
+    const ha = HUBS[a], hb = HUBS[b];
+    const BRIDGES = 4;
+    for (let i = 0; i < BRIDGES; i++) {
+      const t = 0.20 + Math.random() * 0.60;
+      const mid = ha.center.clone().lerp(hb.center, t);
+      mid.x += gauss(7); mid.y += gauss(7); mid.z += gauss(5);
+      const c1 = new THREE.Color(ha.color), c2 = new THREE.Color(hb.color);
+      const blended = c1.clone().lerp(c2, 0.4 + Math.random() * 0.2).getHex();
+      const m = new THREE.SpriteMaterial({
+        map: nebulaSprite, color: blended,
+        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+        opacity: 0.03 + Math.random() * 0.06,
+        rotation: Math.random() * Math.PI * 2,
+      });
+      const s = new THREE.Sprite(m);
+      s.position.copy(mid);
+      s.scale.setScalar(28 + Math.random() * 42);
+      scene.add(s);
     }
-    log('outliers placed:', placed);
-    const outGeo = new THREE.BufferGeometry();
-    outGeo.setAttribute('position', new THREE.Float32BufferAttribute(OUT_POS, 3));
-    outGeo.setAttribute('color',    new THREE.Float32BufferAttribute(OUT_COL, 3));
-    outGeo.setAttribute('size',     new THREE.Float32BufferAttribute(OUT_SIZ, 1));
-    outGeo.setAttribute('phase',    new THREE.Float32BufferAttribute(OUT_PHA, 1));
-    // Reuse the same shader material (shares uTime uniform) by cloning
-    const outMat = pointsMat.clone();
-    outMat.uniforms = pointsMat.uniforms; // share uniforms so time + sprite are the same instance
-    scene.add(new THREE.Points(outGeo, outMat));
   }
 
   // ---------- Far stardust backdrop ----------
@@ -280,14 +324,13 @@
     const N = 1500;
     const pos = new Float32Array(N * 3);
     for (let i = 0; i < N; i++) {
-      // Distribute on a far sphere shell so distant stars surround everything
       const r = 320 + Math.random() * 200;
       const u = Math.random() * 2 - 1;
       const p = Math.random() * Math.PI * 2;
       const s = Math.sqrt(1 - u * u);
       pos[i*3+0] = r * s * Math.cos(p);
       pos[i*3+1] = r * s * Math.sin(p);
-      pos[i*3+2] = -Math.abs(r * u); // bias to be behind / further along -z
+      pos[i*3+2] = -Math.abs(r * u);
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -299,42 +342,30 @@
   }
 
   // ------------------------------------------------------------------
-  // Camera path: approach + 5 hub visits + transits + exit
+  // Camera path — approach + 5 hub visits + transits + exit.
+  // Hubs are closer now so we tighten outR slightly.
   // ------------------------------------------------------------------
-  // Initial camera pulled back to z=160 to fit the much wider galaxy
-  // (now X spread ±100 + nebula halos extending further) and clearly
-  // show all 5 hub clusters distinct from each other.
-  const FAR_START = new THREE.Vector3(0, 0, 160);
+  const FAR_START = new THREE.Vector3(0, 0, 145);
 
-  // Per-hub presets: how the camera orbits each hub cluster
-  // outR  = distance from hub along outward direction (toward camera)
-  // tanU  = perpendicular drift in U axis
-  // tanV  = perpendicular drift in V axis
-  // elev  = pure z offset
   const HUB_PRESETS = [
-    { outR: [30, 22], tanU: [-8,  +9], tanV: [+3, -3], elev: [+2, +4] },  // hub 0 — close approach
-    { outR: [26, 20], tanU: [+7,  -8], tanV: [-4, +4], elev: [-1, +2] },  // hub 1 — horizontal orbit
-    { outR: [28, 24], tanU: [-6,  +8], tanV: [+5, +7], elev: [+3, +1] },  // hub 2 — orbit + lift
-    { outR: [24, 28], tanU: [+8,  -6], tanV: [-6, +2] , elev: [-2, +3] }, // hub 3 — pull back
-    { outR: [32, 22], tanU: [-9,  +7], tanV: [+2, -5], elev: [+1, +2] },  // hub 4 — dive in
+    { outR: [26, 20], tanU: [-7,  +8], tanV: [+3, -3], elev: [+2, +4] },
+    { outR: [24, 18], tanU: [+6,  -7], tanV: [-4, +4], elev: [-1, +2] },
+    { outR: [25, 21], tanU: [-5,  +7], tanV: [+5, +6], elev: [+3, +1] },
+    { outR: [22, 25], tanU: [+7,  -6], tanV: [-6, +2], elev: [-2, +3] },
+    { outR: [28, 20], tanU: [-8,  +6], tanV: [+2, -5], elev: [+1, +2] },
   ];
 
   function hubCameraAt(hubIdx, localP) {
     const hub = HUBS[hubIdx];
     const preset = HUB_PRESETS[hubIdx];
-    const t = 0.5 - 0.5 * Math.cos(localP * Math.PI); // easeInOutSine
+    const t = 0.5 - 0.5 * Math.cos(localP * Math.PI);
 
     const outR = THREE.MathUtils.lerp(preset.outR[0], preset.outR[1], t);
     const tanU = THREE.MathUtils.lerp(preset.tanU[0], preset.tanU[1], t);
     const tanV = THREE.MathUtils.lerp(preset.tanV[0], preset.tanV[1], t);
     const elev = THREE.MathUtils.lerp(preset.elev[0], preset.elev[1], t);
 
-    // "Outward" is the direction from cluster center toward where the camera
-    // approached from (broadly +z relative to hub). Use a tilted outward
-    // vector for variety per hub.
-    const baseOutward = new THREE.Vector3(0, 0, 1);
-    const outward = baseOutward.clone();
-    // Add slight per-hub bias to outward so cameras vary their approach angle
+    const outward = new THREE.Vector3(0, 0, 1);
     const biases = [
       new THREE.Vector3( 0.0, 0.0, 0),
       new THREE.Vector3( 0.3, 0.1, 0),
@@ -344,7 +375,6 @@
     ];
     outward.add(biases[hubIdx]).normalize();
 
-    // tangentU = perpendicular in x
     const tangentU = new THREE.Vector3(1, 0, 0);
     const tangentV = new THREE.Vector3(0, 1, 0);
 
@@ -382,7 +412,7 @@
       const target = hubCameraAt(0, 0);
       return {
         pos: FAR_START.clone().lerp(target.pos, smoothStep(localP)),
-        look: HUBS[0].center.clone().multiplyScalar(smoothStep(localP)), // gradually shift look from origin to hub 0
+        look: HUBS[0].center.clone().multiplyScalar(smoothStep(localP)),
       };
     }
     if (st.type === 'visit') return hubCameraAt(st.hub, localP);
@@ -395,7 +425,6 @@
         look: HUBS[st.from].center.clone().lerp(HUBS[st.to].center, t),
       };
     }
-    // exit — pull back past hub 4
     const a = hubCameraAt(4, 1);
     const end = HUBS[4].center.clone().add(new THREE.Vector3(0, 0, -80));
     return {
@@ -476,7 +505,6 @@
   updateRaw();
   window.addEventListener('scroll', updateRaw, { passive: true });
 
-  // Hero canvas + body bg + we-active
   const heroSection = document.querySelector('section.hero, [data-chapter="Hero"]');
   const globalCanvas = document.getElementById('canvas-wrapper');
   const neuralWrap = document.getElementById('neural-canvas-wrap');
@@ -511,7 +539,6 @@
 
   let t0 = performance.now();
   function animate(now) {
-    // Update time uniform for per-point motion shader (in seconds)
     pointsMat.uniforms.uTime.value = (now - t0) / 1000;
 
     smoothProgress += (rawProgress - smoothProgress) * 0.07;
@@ -529,5 +556,5 @@
     requestAnimationFrame(animate);
   }
   requestAnimationFrame(animate);
-  log('animate started — galaxy scene ready');
+  log('animate started — unified galaxy ready');
 })();
