@@ -525,20 +525,31 @@
     if (heroSection && globalCanvas) {
       const heroRect = heroSection.getBoundingClientRect();
       const scrolled = Math.max(0, -heroRect.top);
-      // Fade later in the hero scroll so the mountain stays visible
-      // closer to the galaxy → smaller dead-navy gap between sections
-      const fadeStart = heroRect.height * 0.45;
-      const fadeEnd = heroRect.height * 0.80;
+      // Mountain cross-fades to galaxy through the middle third of the hero.
+      // Galaxy canvas-wrap (position:fixed) ramps opacity up in this same
+      // window — see we-active scroll trigger below.
+      const fadeStart = heroRect.height * 0.30;
+      const fadeEnd = heroRect.height * 0.62;
       const t = Math.max(0, Math.min(1, (scrolled - fadeStart) / (fadeEnd - fadeStart)));
       globalCanvas.style.opacity = (1 - t).toFixed(3);
       globalCanvas.style.pointerEvents = t > 0.5 ? 'none' : '';
       if (t > 0.05) document.body.style.backgroundColor = '#000814';
       else document.body.style.backgroundColor = '';
     }
+    // we-active triggers when scrolled past the mountain fade-end so the
+    // galaxy cross-fades in exactly as the mountain finishes fading out.
+    // Using scroll position (not section rect.top) because the neural
+    // section now has a negative margin-top overlapping the hero, so its
+    // rect.top would activate way too early.
     const rect = section.getBoundingClientRect();
-    const vh = window.innerHeight;
-    const inside = rect.top <= vh * 0.6 && rect.bottom >= 0;
+    const heroH = heroSection ? heroSection.offsetHeight : 0;
+    const heroFadeEnd = heroH * 0.62;
+    const inside = window.scrollY >= heroFadeEnd * 0.85 && rect.bottom >= 0;
     document.body.classList.toggle('we-active', inside);
+    // past-hero kills the bundle canvas entirely (CSS display:none) once
+    // we're safely past the mountain so the bundle's chapter-2 scene
+    // can't bleed through with the tunneling effect.
+    document.body.classList.toggle('past-hero', window.scrollY >= heroH * 0.85);
   }
   updateChrome();
   window.addEventListener('scroll', updateChrome, { passive: true });
