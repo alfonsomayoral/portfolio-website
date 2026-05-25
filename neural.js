@@ -71,12 +71,14 @@
   // Plus a CENTRAL CORE cluster anchored at galaxy origin so the
   // middle of the constellation is densely populated, not hollow.
   // ------------------------------------------------------------------
+  // Hub colors — boosted saturation so green/purple/darkBlue read clearly
+  // through additive blending (white tends to overwhelm pale hues).
   const HUB_COLORS = {
     lightBlue: 0x7ecbff,
-    green:     0x70d8a0,
-    purple:    0xa078e8,
-    darkBlue:  0x3868c8,
-    orange:    0xff8a40,
+    green:     0x40e088,
+    purple:    0x9050f0,
+    darkBlue:  0x2a55d0,
+    orange:    0xff7820,
   };
 
   const CLUSTERS = [
@@ -93,7 +95,7 @@
       sigma: new THREE.Vector3(0.90, 1.20, 1.35), rotZ:  0.20 },
 
     // CENTRAL CORE — fills the void in the middle of the constellation
-    { center: new THREE.Vector3(   0,    0, -72), color: 0xb0d4ff,             count:  6500, spread: 24, isHub: false,
+    { center: new THREE.Vector3(   0,    0, -72), color: 0xc8cce0,             count:  6500, spread: 24, isHub: false,
       sigma: new THREE.Vector3(1.30, 1.00, 1.15), rotZ:  0.0  },
 
     // 5 AMBIENT — fill space between hubs with irregular shapes
@@ -162,9 +164,10 @@
       const brightChance = (cl.isHub ? 0.025 : 0.015) * (1 - distNorm * 0.6);
       const isBright = Math.random() < brightChance;
 
-      // Color
-      const whiteAmount = isBright ? (0.55 + Math.random() * 0.35)
-                                   : (Math.random() < 0.06 ? 0.5 : Math.random() * 0.30);
+      // Color — keep hue strong: bright accents only slightly whiter than base,
+      // regular dust mostly base color with occasional brighter speck.
+      const whiteAmount = isBright ? (0.20 + Math.random() * 0.30)
+                                   : (Math.random() < 0.05 ? 0.35 : Math.random() * 0.18);
       const c = baseColor.clone().lerp(new THREE.Color(0xffffff), whiteAmount);
       COL.push(c.r, c.g, c.b);
 
@@ -192,10 +195,13 @@
     c.width = c.height = 64;
     const g = c.getContext('2d');
     const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    // Neutral white→transparent gradient so vColor controls hue without
+    // the sprite tinting everything pale blue (was the v12 issue with
+    // green/purple/darkBlue hubs washing toward blue).
     grd.addColorStop(0.00, 'rgba(255,255,255,1.0)');
-    grd.addColorStop(0.20, 'rgba(220,240,255,0.85)');
-    grd.addColorStop(0.55, 'rgba(100,180,255,0.30)');
-    grd.addColorStop(1.00, 'rgba(0,0,0,0)');
+    grd.addColorStop(0.30, 'rgba(255,255,255,0.70)');
+    grd.addColorStop(0.65, 'rgba(255,255,255,0.20)');
+    grd.addColorStop(1.00, 'rgba(255,255,255,0.0)');
     g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
     const tex = new THREE.CanvasTexture(c);
     tex.needsUpdate = true;
