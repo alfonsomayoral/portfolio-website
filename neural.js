@@ -237,10 +237,14 @@
       void main() {
         vColor = color;
         vec3 pos = position;
-        float wave = sin(uTime * 0.35 + phase);
-        pos.x += wave * 0.20;
-        pos.y += cos(uTime * 0.40 + phase * 1.6) * 0.18;
-        pos.z += sin(uTime * 0.30 + phase * 2.1) * 0.15;
+        // Stronger per-point drift so the constellation feels alive even
+        // when the camera is parked. Each axis uses a different speed
+        // and the per-vertex phase keeps motion uncorrelated → no
+        // visible "wave" patterns, just organic shimmer.
+        float wave = sin(uTime * 0.95 + phase);
+        pos.x += wave * 0.60;
+        pos.y += cos(uTime * 1.10 + phase * 1.6) * 0.55;
+        pos.z += sin(uTime * 0.80 + phase * 2.1) * 0.45;
 
         vec4 mv = modelViewMatrix * vec4(pos, 1.0);
         gl_Position = projectionMatrix * mv;
