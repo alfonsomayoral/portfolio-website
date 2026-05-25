@@ -517,10 +517,9 @@
   const heroSection = document.querySelector('section.hero, [data-chapter="Hero"]');
   const globalCanvas = document.getElementById('canvas-wrapper');
   const neuralWrap = document.getElementById('neural-canvas-wrap');
-  if (neuralWrap) {
-    neuralWrap.style.opacity = '1';
-    neuralWrap.style.transition = 'none';
-  }
+  // Note: do NOT force neuralWrap opacity here. The new fixed-position
+  // canvas relies on the body.we-active CSS rule to cross-fade in
+  // exactly when the mountain finishes fading out.
   function updateChrome() {
     if (heroSection && globalCanvas) {
       const heroRect = heroSection.getBoundingClientRect();
