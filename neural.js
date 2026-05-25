@@ -219,7 +219,10 @@
   // ------------------------------------------------------------------
   // Camera path: approach + 5 hub visits + transits + exit
   // ------------------------------------------------------------------
-  const FAR_START = new THREE.Vector3(0, 0, 180);
+  // Initial camera at z=110 so the user sees the galaxy clearly in its
+  // totality from the start (was z=180 — too far, clusters looked like
+  // tiny faint sparkles).
+  const FAR_START = new THREE.Vector3(0, 0, 110);
 
   // Per-hub presets: how the camera orbits each hub cluster
   // outR  = distance from hub along outward direction (toward camera)
