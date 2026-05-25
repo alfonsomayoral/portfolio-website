@@ -525,8 +525,10 @@
     if (heroSection && globalCanvas) {
       const heroRect = heroSection.getBoundingClientRect();
       const scrolled = Math.max(0, -heroRect.top);
-      const fadeStart = heroRect.height * 0.25;
-      const fadeEnd = heroRect.height * 0.55;
+      // Fade later in the hero scroll so the mountain stays visible
+      // closer to the galaxy → smaller dead-navy gap between sections
+      const fadeStart = heroRect.height * 0.45;
+      const fadeEnd = heroRect.height * 0.80;
       const t = Math.max(0, Math.min(1, (scrolled - fadeStart) / (fadeEnd - fadeStart)));
       globalCanvas.style.opacity = (1 - t).toFixed(3);
       globalCanvas.style.pointerEvents = t > 0.5 ? 'none' : '';
