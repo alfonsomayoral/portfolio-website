@@ -521,35 +521,37 @@
   // canvas relies on the body.we-active CSS rule to cross-fade in
   // exactly when the mountain finishes fading out.
   function updateChrome() {
-    let crossfadeT = 0;
+    let mountainT = 0, galaxyT = 0;
+    const heroH = heroSection ? heroSection.offsetHeight : 0;
     if (heroSection && globalCanvas) {
       const heroRect = heroSection.getBoundingClientRect();
       const scrolled = Math.max(0, -heroRect.top);
-      // Mountain ↔ galaxy crossfade window (30%-62% of hero scroll).
-      // Galaxy opacity is the complement of mountain opacity through the
-      // SAME window so there's never a dark/empty middle.
-      const fadeStart = heroRect.height * 0.30;
-      const fadeEnd = heroRect.height * 0.62;
-      crossfadeT = Math.max(0, Math.min(1, (scrolled - fadeStart) / (fadeEnd - fadeStart)));
-      globalCanvas.style.opacity = (1 - crossfadeT).toFixed(3);
-      globalCanvas.style.pointerEvents = crossfadeT > 0.5 ? 'none' : '';
-      if (crossfadeT > 0.05) document.body.style.backgroundColor = '#000814';
+      // Mountain fades QUICKLY in a tight window so it's fully gone before
+      // the bundle's chapter-2 scene can start bleeding through.
+      const mFadeStart = heroH * 0.30;
+      const mFadeEnd   = heroH * 0.42;
+      mountainT = Math.max(0, Math.min(1, (scrolled - mFadeStart) / (mFadeEnd - mFadeStart)));
+      // Galaxy fades in over a LONGER, overlapping window so the cross-fade
+      // feels smooth even though the mountain disappears faster.
+      const gFadeStart = heroH * 0.30;
+      const gFadeEnd   = heroH * 0.55;
+      galaxyT = Math.max(0, Math.min(1, (scrolled - gFadeStart) / (gFadeEnd - gFadeStart)));
+      globalCanvas.style.opacity = (1 - mountainT).toFixed(3);
+      globalCanvas.style.pointerEvents = mountainT > 0.5 ? 'none' : '';
+      if (mountainT > 0.05) document.body.style.backgroundColor = '#000814';
       else document.body.style.backgroundColor = '';
     }
-    // Drive galaxy canvas opacity directly with the same crossfade param.
     if (neuralWrap) {
-      neuralWrap.style.opacity = crossfadeT.toFixed(3);
+      neuralWrap.style.opacity = galaxyT.toFixed(3);
     }
-    // we-active still controls heading + card visibility and is set once
-    // the crossfade is mostly complete so the cards don't pop in too early.
+    // we-active reveals heading + cards once the galaxy is largely visible.
     const rect = section.getBoundingClientRect();
-    const heroH = heroSection ? heroSection.offsetHeight : 0;
-    const inside = crossfadeT >= 0.5 && rect.bottom >= 0;
+    const inside = galaxyT >= 0.5 && rect.bottom >= 0;
     document.body.classList.toggle('we-active', inside);
-    // past-hero kills the bundle canvas entirely (CSS display:none) once
-    // we're safely past the mountain so the bundle's chapter-2 scene
-    // can't bleed through with the tunneling effect.
-    document.body.classList.toggle('past-hero', window.scrollY >= heroH * 0.85);
+    // past-hero kills the bundle canvas (display:none) the MOMENT the
+    // mountain is fully faded, so the bundle's chapter-2 perspective
+    // grid can never bleed through during the rest of the page.
+    document.body.classList.toggle('past-hero', mountainT >= 1);
   }
   updateChrome();
   window.addEventListener('scroll', updateChrome, { passive: true });
