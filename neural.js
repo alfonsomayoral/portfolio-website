@@ -340,76 +340,76 @@
   }
 
   // ------------------------------------------------------------------
-  // CAMERA PATH — Catmull-Rom curve through 17 waypoints.
-  // Park-and-transit structure:
+  // CAMERA PATH — Catmull-Rom curve through 12 waypoints.
+  // Cleaner motion than the previous "dive through center" arcs:
   //   - Each hub has a visit-start + visit-end pair CLOSE together
   //     (camera barely drifts during card display).
-  //   - Each transit has a MIDPOINT waypoint pulled toward galaxy center
-  //     so the camera dives through the dense middle on its way to the
-  //     next hub. Movement is concentrated in the transit phases.
-  // Total: 17 WP -> 16 segments. 11 STATIONS -> 16 segs (visits=1seg,
-  // transits=2segs, exit=2segs).
+  //   - Transits go DIRECTLY from one visit-end to the next visit-start.
+  //     No more artificial midpoint waypoints pulling toward galaxy
+  //     center — just a near-straight path smoothed by Catmull-Rom's
+  //     natural tangents (and high tension 0.7 for straightness).
+  //   - LookAt is split: during the visit the camera slowly rotates
+  //     50% of the way toward the next hub (the "peek-ahead"); during
+  //     the transit it completes the remaining 50%. Result: angle
+  //     changes are spread across both phases, neither feels forced.
+  // Total: 12 WP -> 11 segments, 1:1 with STATIONS.
   // ------------------------------------------------------------------
   const WAYPOINTS = [
     new THREE.Vector3(   0,    0,  140),  //  0  far approach start
 
-    new THREE.Vector3(  22,   65,    8),  //  1  hub 0 visit-start (parked outside hub 0)
-    new THREE.Vector3(   8,   60,    0),  //  2  hub 0 visit-end (small drift)
+    new THREE.Vector3(  22,   65,    8),  //  1  hub 0 visit-start
+    new THREE.Vector3(   8,   60,    0),  //  2  hub 0 visit-end
 
-    new THREE.Vector3(  38,   28,  -45),  //  3  transit 0->1 midpoint (dive toward center)
+    new THREE.Vector3(  98,   22,  -30),  //  3  hub 1 visit-start
+    new THREE.Vector3(  92,   14,  -22),  //  4  hub 1 visit-end
 
-    new THREE.Vector3(  98,   22,  -30),  //  4  hub 1 visit-start
-    new THREE.Vector3(  92,   14,  -22),  //  5  hub 1 visit-end
+    new THREE.Vector3(  72,  -58,  -45),  //  5  hub 2 visit-start
+    new THREE.Vector3(  64,  -52,  -38),  //  6  hub 2 visit-end
 
-    new THREE.Vector3(  62,  -18,  -58),  //  6  transit 1->2 midpoint
+    new THREE.Vector3( -72,  -58,  -45),  //  7  hub 3 visit-start
+    new THREE.Vector3( -64,  -52,  -38),  //  8  hub 3 visit-end
 
-    new THREE.Vector3(  72,  -58,  -45),  //  7  hub 2 visit-start
-    new THREE.Vector3(  64,  -52,  -38),  //  8  hub 2 visit-end
+    new THREE.Vector3( -98,   22,  -30),  //  9  hub 4 visit-start
+    new THREE.Vector3( -92,   14,  -22),  // 10  hub 4 visit-end
 
-    new THREE.Vector3(   0,  -52,  -92),  //  9  transit 2->3 midpoint (deep dive below center)
-
-    new THREE.Vector3( -72,  -58,  -45),  // 10  hub 3 visit-start
-    new THREE.Vector3( -64,  -52,  -38),  // 11  hub 3 visit-end
-
-    new THREE.Vector3( -48,   -2,  -55),  // 12  transit 3->4 midpoint
-
-    new THREE.Vector3( -98,   22,  -30),  // 13  hub 4 visit-start
-    new THREE.Vector3( -92,   14,  -22),  // 14  hub 4 visit-end
-
-    new THREE.Vector3( -38,   12,   25),  // 15  exit midpoint (pull back rising)
-    new THREE.Vector3(  10,    0,  130),  // 16  final far position
+    new THREE.Vector3(  10,    0,  130),  // 11  final far position
   ];
-  // Catmull-Rom with tension 0.5 (default) for smooth C1 transitions across segments
-  const positionCurve = new THREE.CatmullRomCurve3(WAYPOINTS, false, 'catmullrom', 0.5);
+  // tension 0.7 = straighter transit segments (default is 0.5)
+  const positionCurve = new THREE.CatmullRomCurve3(WAYPOINTS, false, 'catmullrom', 0.7);
 
   function smoothStep(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
-
-  // 11 STATIONS mapping into 16 curve segments.
-  //   visits = 1 segment each (small drift = barely any motion)
-  //   transits = 2 segments each (long traverse through galaxy center)
-  //   approach = 1 segment, exit = 2 segments
-  // Scroll allocation favors equal time per station, but transits cover
-  // much more curve distance -> camera moves fast during transits, slow
-  // during visits = "rest at hubs, fly between them" feel.
-  const STATIONS = [
-    { type: 'approach', range: [0.00, 0.06], startU:  0/16, endU:  1/16 },
-    { type: 'visit',    range: [0.06, 0.16], hub: 0, startU:  1/16, endU:  2/16 },
-    { type: 'transit',  range: [0.16, 0.26], from: 0, to: 1, startU:  2/16, endU:  4/16 },
-    { type: 'visit',    range: [0.26, 0.36], hub: 1, startU:  4/16, endU:  5/16 },
-    { type: 'transit',  range: [0.36, 0.46], from: 1, to: 2, startU:  5/16, endU:  7/16 },
-    { type: 'visit',    range: [0.46, 0.56], hub: 2, startU:  7/16, endU:  8/16 },
-    { type: 'transit',  range: [0.56, 0.66], from: 2, to: 3, startU:  8/16, endU: 10/16 },
-    { type: 'visit',    range: [0.66, 0.76], hub: 3, startU: 10/16, endU: 11/16 },
-    { type: 'transit',  range: [0.76, 0.86], from: 3, to: 4, startU: 11/16, endU: 13/16 },
-    { type: 'visit',    range: [0.86, 0.96], hub: 4, startU: 13/16, endU: 14/16 },
-    { type: 'exit',     range: [0.96, 1.00], startU: 14/16, endU: 16/16 },
-  ];
-
-  // Quintic smoothstep — flatter derivative at endpoints than cubic,
-  // gives more "easing into rest" feel at station boundaries.
   function smoothStep5(x) {
     x = Math.max(0, Math.min(1, x));
     return x * x * x * (x * (x * 6 - 15) + 10);
+  }
+
+  // 11 stations, 11 segments. 1:1 mapping (each station = exactly one
+  // curve segment).
+  const STATIONS = [
+    { type: 'approach', range: [0.00, 0.06], startU:  0/11, endU:  1/11 },
+    { type: 'visit',    range: [0.06, 0.16], hub: 0, startU:  1/11, endU:  2/11 },
+    { type: 'transit',  range: [0.16, 0.26], from: 0, to: 1, startU:  2/11, endU:  3/11 },
+    { type: 'visit',    range: [0.26, 0.36], hub: 1, startU:  3/11, endU:  4/11 },
+    { type: 'transit',  range: [0.36, 0.46], from: 1, to: 2, startU:  4/11, endU:  5/11 },
+    { type: 'visit',    range: [0.46, 0.56], hub: 2, startU:  5/11, endU:  6/11 },
+    { type: 'transit',  range: [0.56, 0.66], from: 2, to: 3, startU:  6/11, endU:  7/11 },
+    { type: 'visit',    range: [0.66, 0.76], hub: 3, startU:  7/11, endU:  8/11 },
+    { type: 'transit',  range: [0.76, 0.86], from: 3, to: 4, startU:  8/11, endU:  9/11 },
+    { type: 'visit',    range: [0.86, 0.96], hub: 4, startU:  9/11, endU: 10/11 },
+    { type: 'exit',     range: [0.96, 1.00], startU: 10/11, endU: 11/11 },
+  ];
+
+  // PEEK_FRACTION: during a visit, the camera rotates this fraction of
+  // the way toward the next hub by the time the visit ends. The transit
+  // then completes (1 - PEEK_FRACTION) of the rotation. Splitting the
+  // rotation across both phases means the angle change is gentle and
+  // continuous, never concentrated in a forced "snap" during the transit.
+  const PEEK_FRACTION = 0.5;
+
+  function nextLookTarget(hubIdx) {
+    // hub i+1 if it exists, otherwise galaxy center (for the last visit
+    // → exit hand-off).
+    return (hubIdx + 1 < HUBS.length) ? HUBS[hubIdx + 1].center : GALAXY_CENTER;
   }
 
   function cameraAt(p) {
@@ -420,23 +420,33 @@
     }
     const st = STATIONS[stIdx];
     const localP = (p - st.range[0]) / (st.range[1] - st.range[0]);
-    // Use quintic for visits (super smooth park) and cubic for transits (responsive)
     const eased = st.type === 'visit' ? smoothStep5(localP) : smoothStep(localP);
 
     // Position via Catmull-Rom curve
     const segU = st.startU + (st.endU - st.startU) * eased;
     const pos = positionCurve.getPoint(Math.max(0, Math.min(1, segU)));
 
-    // LookAt by station type
+    // LookAt — continuous peek-ahead motion across visit→transit boundary
     let look;
     if (st.type === 'approach') {
       look = GALAXY_CENTER.clone().lerp(HUBS[0].center, eased);
     } else if (st.type === 'visit') {
-      look = HUBS[st.hub].center.clone();
+      // Rotate 0 → PEEK_FRACTION toward next destination across the visit
+      const nextT = nextLookTarget(st.hub);
+      const t = PEEK_FRACTION * eased;
+      look = HUBS[st.hub].center.clone().lerp(nextT, t);
     } else if (st.type === 'transit') {
-      look = HUBS[st.from].center.clone().lerp(HUBS[st.to].center, eased);
+      // Continue from where the previous visit ended (PEEK_FRACTION),
+      // ramp the rest of the way to the next hub
+      const fromC = HUBS[st.from].center;
+      const toC = HUBS[st.to].center;
+      const t = PEEK_FRACTION + (1 - PEEK_FRACTION) * eased;
+      look = fromC.clone().lerp(toC, t);
     } else { // exit
-      look = HUBS[4].center.clone().lerp(GALAXY_CENTER, eased);
+      // Continue from end of visit 4 (was peeking toward GALAXY_CENTER)
+      const fromC = HUBS[HUBS.length - 1].center;
+      const t = PEEK_FRACTION + (1 - PEEK_FRACTION) * eased;
+      look = fromC.clone().lerp(GALAXY_CENTER, t);
     }
 
     return { pos, look };
