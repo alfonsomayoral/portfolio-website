@@ -541,8 +541,21 @@
       if (mountainT > 0.05) document.body.style.backgroundColor = '#000814';
       else document.body.style.backgroundColor = '';
     }
+    // Fade galaxy canvas out as the viewport bottom passes the neural
+    // section bottom — otherwise the position:fixed canvas covers the
+    // footer at the bottom of the page. Fade window: 0 → 50% viewport
+    // height of overhang.
+    let exitFade = 0;
+    const sectionBottom = section.offsetTop + section.offsetHeight;
+    const overhang = (window.scrollY + window.innerHeight) - sectionBottom;
+    if (overhang > 0) {
+      exitFade = Math.min(1, overhang / (window.innerHeight * 0.5));
+    }
+    const finalGalaxyOpacity = galaxyT * (1 - exitFade);
     if (neuralWrap) {
-      neuralWrap.style.opacity = galaxyT.toFixed(3);
+      neuralWrap.style.opacity = finalGalaxyOpacity.toFixed(3);
+      // Also pull pointer-events when fully faded so footer links work
+      neuralWrap.style.pointerEvents = finalGalaxyOpacity < 0.05 ? 'none' : 'none';
     }
     // we-active reveals heading + cards once the galaxy is largely visible.
     const rect = section.getBoundingClientRect();
