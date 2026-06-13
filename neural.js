@@ -489,7 +489,34 @@
     hub: parseInt(el.dataset.hub, 10),
     visit: visitByHub[parseInt(el.dataset.hub, 10)],
     side: el.classList.contains('neural-card--left') ? 'left' : 'right',
+    // Dimensions are cached once and refreshed only on resize.  Reading
+    // offsetWidth/offsetHeight every animation frame caused 1300+ ms of
+    // forced reflow per 6 seconds of scroll.  Cards don't change size
+    // mid-scroll, so once is enough.
+    w: 0, h: 0,
+    // Track the last-applied state so we skip per-frame writes for cards
+    // that are sitting at opacity 0 (hidden).  Saves ~95% of style writes.
+    lastVis: -1,
   }));
+  // Anchor cards top-left and switch them onto their own GPU layer.
+  // translate3d keeps positioning on the compositor instead of layout.
+  for (const c of cards) {
+    c.el.style.left = '0px';
+    c.el.style.top  = '0px';
+    c.el.style.willChange = 'transform, opacity';
+  }
+  function measureCards() {
+    for (const c of cards) {
+      // Temporarily un-hide so layout returns real dimensions.  Reading
+      // offsetWidth on a 100%-hidden element returns 0 if it was display:none;
+      // visibility:hidden + opacity 0 keeps it laid-out, so we just read.
+      const r = c.el.getBoundingClientRect();
+      c.w = r.width  || c.w || 460;
+      c.h = r.height || c.h || 320;
+    }
+  }
+  measureCards();
+  window.addEventListener('resize', measureCards);
 
   const VEC = new THREE.Vector3();
   function positionCards() {
@@ -511,32 +538,42 @@
       // appear when the canvas isn't on screen (top of page, past footer).
       vis *= neuralOpacity;
       if (vis <= 0.01) {
-        c.el.style.opacity = '0';
-        c.el.style.pointerEvents = 'none';
+        // Only touch the DOM when state actually changes; saves writes
+        // for cards parked at opacity 0 between visits.
+        if (c.lastVis !== 0) {
+          c.el.style.opacity = '0';
+          c.el.style.pointerEvents = 'none';
+          c.lastVis = 0;
+        }
         continue;
       }
       VEC.copy(HUBS[c.hub].center).project(camera);
       const sx = (VEC.x + 1) * 0.5 * w;
       const sy = (1 - (VEC.y + 1) * 0.5) * h;
-      const cardW = c.el.offsetWidth || 460;
-      const cardH = c.el.offsetHeight || 320;
+      const cardW = c.w, cardH = c.h;
       // Attract the anchor point 35% of the way toward the screen center,
       // and reduce the card-from-anchor offset (80→30). Cards still track
       // their cluster but live in the centre band of the viewport.
       const targetSx = sx + (w / 2 - sx) * 0.35;
       const targetSy = (sy + h / 2) / 2;   // 50/50 mix node↔centre vertical
-      let left, top;
+      let left;
       if (c.side === 'right') {
         left = Math.max(24, Math.min(w - cardW - 24, targetSx + 30));
       } else {
         left = Math.max(24, Math.min(w - cardW - 24, targetSx - cardW - 30));
       }
-      top = Math.max(24, Math.min(h - cardH - 24, targetSy - cardH / 2));
-      c.el.style.left = `${left}px`;
-      c.el.style.top  = `${top}px`;
+      const top = Math.max(24, Math.min(h - cardH - 24, targetSy - cardH / 2));
+      // Single transform per frame moves position + entrance lift on the
+      // compositor (no layout, no paint).  translate3d forces a GPU layer.
+      const lift = (1 - vis) * 20;
+      c.el.style.transform = `translate3d(${left}px, ${top + lift}px, 0)`;
       c.el.style.opacity = vis.toFixed(3);
-      c.el.style.transform = `translateY(${(1 - vis) * 20}px)`;
-      c.el.style.pointerEvents = vis > 0.6 ? 'auto' : 'none';
+      const wantsPointer = vis > 0.6;
+      const hadPointer = c.lastVis > 0.6;
+      if (hadPointer !== wantsPointer) {
+        c.el.style.pointerEvents = wantsPointer ? 'auto' : 'none';
+      }
+      c.lastVis = vis;
     }
   }
 
@@ -574,55 +611,88 @@
   // Note: do NOT force neuralWrap opacity here. The new fixed-position
   // canvas relies on the body.we-active CSS rule to cross-fade in
   // exactly when the mountain finishes fading out.
+  // Last-applied state so we can skip redundant style writes each frame.
+  // The trace showed updateChrome firing per-scroll-event and re-writing
+  // the same opacity strings, churning compositor work for nothing.
+  const chromeState = {
+    globalOp: -1, globalPE: '',
+    bodyBg: '',
+    neuralOp: -1, neuralPE: '',
+    weActive: null, pastHero: null,
+  };
   function updateChrome() {
+    // === BATCHED READS (all geometry queries up front) ===
+    const heroH      = heroSection ? heroSection.offsetHeight : 0;
+    const heroRect   = heroSection ? heroSection.getBoundingClientRect() : null;
+    const sectionRect = section.getBoundingClientRect();
+    const innerH     = window.innerHeight;
+    const scrollY    = window.scrollY;
+
+    // === PURE CALCS (no DOM touch) ===
     let mountainT = 0, galaxyT = 0;
-    const heroH = heroSection ? heroSection.offsetHeight : 0;
-    if (heroSection && globalCanvas) {
-      const heroRect = heroSection.getBoundingClientRect();
+    if (heroRect && globalCanvas) {
       const scrolled = Math.max(0, -heroRect.top);
-      // Mountain fades QUICKLY in a tight window so it's fully gone before
-      // the bundle's chapter-2 scene can start bleeding through.
+      // Mountain fades quickly so it's gone before the bundle's chapter-2
+      // scene can start bleeding through.
       const mFadeStart = heroH * 0.30;
       const mFadeEnd   = heroH * 0.42;
       mountainT = Math.max(0, Math.min(1, (scrolled - mFadeStart) / (mFadeEnd - mFadeStart)));
-      // Galaxy fades in over a LONGER, overlapping window so the cross-fade
-      // feels smooth even though the mountain disappears faster. Quintic
-      // easing (smoothStep5) gives a very gentle take-off — no perceptible
-      // "pop" when the cloud first becomes visible.
+      // Galaxy fades in over a longer, overlapping window with quintic
+      // easing — no perceptible "pop" when the cloud first appears.
       const gFadeStart = heroH * 0.18;
       const gFadeEnd   = heroH * 0.72;
       const gRaw       = Math.max(0, Math.min(1, (scrolled - gFadeStart) / (gFadeEnd - gFadeStart)));
       galaxyT = smoothStep5(gRaw);
-      globalCanvas.style.opacity = (1 - mountainT).toFixed(3);
-      globalCanvas.style.pointerEvents = mountainT > 0.5 ? 'none' : '';
-      if (mountainT > 0.05) document.body.style.backgroundColor = '#000814';
-      else document.body.style.backgroundColor = '';
     }
-    // Fade galaxy canvas out as the viewport bottom passes the neural
-    // section bottom — otherwise the position:fixed canvas covers the
-    // footer at the bottom of the page. Fade window: 0 → 50% viewport
-    // height of overhang.
-    let exitFade = 0;
-    const sectionBottom = section.offsetTop + section.offsetHeight;
-    const overhang = (window.scrollY + window.innerHeight) - sectionBottom;
-    if (overhang > 0) {
-      exitFade = Math.min(1, overhang / (window.innerHeight * 0.5));
-    }
+    // Exit fade as viewport bottom passes section bottom (so the fixed
+    // canvas doesn't cover the footer).
+    const sectionBottom = sectionRect.bottom + scrollY;
+    const overhang = (scrollY + innerH) - sectionBottom;
+    const exitFade = overhang > 0 ? Math.min(1, overhang / (innerH * 0.5)) : 0;
     const finalGalaxyOpacity = galaxyT * (1 - exitFade);
     neuralOpacity = finalGalaxyOpacity;
-    if (neuralWrap) {
-      neuralWrap.style.opacity = finalGalaxyOpacity.toFixed(3);
-      // Also pull pointer-events when fully faded so footer links work
-      neuralWrap.style.pointerEvents = finalGalaxyOpacity < 0.05 ? 'none' : 'none';
+    const inside = galaxyT >= 0.5 && sectionRect.bottom >= 0;
+
+    // === BATCHED WRITES (only when values actually changed) ===
+    if (heroSection && globalCanvas) {
+      const op = (1 - mountainT).toFixed(3);
+      if (op !== chromeState.globalOp) {
+        globalCanvas.style.opacity = op;
+        chromeState.globalOp = op;
+      }
+      const pe = mountainT > 0.5 ? 'none' : '';
+      if (pe !== chromeState.globalPE) {
+        globalCanvas.style.pointerEvents = pe;
+        chromeState.globalPE = pe;
+      }
+      const bg = mountainT > 0.05 ? '#000814' : '';
+      if (bg !== chromeState.bodyBg) {
+        document.body.style.backgroundColor = bg;
+        chromeState.bodyBg = bg;
+      }
     }
-    // we-active reveals heading + cards once the galaxy is largely visible.
-    const rect = section.getBoundingClientRect();
-    const inside = galaxyT >= 0.5 && rect.bottom >= 0;
-    document.body.classList.toggle('we-active', inside);
-    // past-hero kills the bundle canvas (display:none) the MOMENT the
-    // mountain is fully faded, so the bundle's chapter-2 perspective
-    // grid can never bleed through during the rest of the page.
-    document.body.classList.toggle('past-hero', mountainT >= 1);
+    if (neuralWrap) {
+      const op = finalGalaxyOpacity.toFixed(3);
+      if (op !== chromeState.neuralOp) {
+        neuralWrap.style.opacity = op;
+        chromeState.neuralOp = op;
+      }
+      // Always 'none' — wrap is purely decorative; previous code had a
+      // ternary that returned 'none' on both branches.
+      if (chromeState.neuralPE !== 'none') {
+        neuralWrap.style.pointerEvents = 'none';
+        chromeState.neuralPE = 'none';
+      }
+    }
+    if (chromeState.weActive !== inside) {
+      document.body.classList.toggle('we-active', inside);
+      chromeState.weActive = inside;
+    }
+    const past = mountainT >= 1;
+    if (chromeState.pastHero !== past) {
+      document.body.classList.toggle('past-hero', past);
+      chromeState.pastHero = past;
+    }
   }
   updateChrome();
   window.addEventListener('scroll', updateChrome, { passive: true });
