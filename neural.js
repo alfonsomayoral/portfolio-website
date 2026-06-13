@@ -384,27 +384,48 @@
   }
 
   // 11 stations, 11 segments. 1:1 mapping (each station = exactly one
-  // curve segment).
+  // curve segment). Visits are longer than transits so the camera lingers
+  // at each cluster (showing the card) and moves crisply between them.
   const STATIONS = [
-    { type: 'approach', range: [0.00, 0.06], startU:  0/11, endU:  1/11 },
-    { type: 'visit',    range: [0.06, 0.16], hub: 0, startU:  1/11, endU:  2/11 },
-    { type: 'transit',  range: [0.16, 0.26], from: 0, to: 1, startU:  2/11, endU:  3/11 },
-    { type: 'visit',    range: [0.26, 0.36], hub: 1, startU:  3/11, endU:  4/11 },
-    { type: 'transit',  range: [0.36, 0.46], from: 1, to: 2, startU:  4/11, endU:  5/11 },
-    { type: 'visit',    range: [0.46, 0.56], hub: 2, startU:  5/11, endU:  6/11 },
-    { type: 'transit',  range: [0.56, 0.66], from: 2, to: 3, startU:  6/11, endU:  7/11 },
-    { type: 'visit',    range: [0.66, 0.76], hub: 3, startU:  7/11, endU:  8/11 },
-    { type: 'transit',  range: [0.76, 0.86], from: 3, to: 4, startU:  8/11, endU:  9/11 },
-    { type: 'visit',    range: [0.86, 0.96], hub: 4, startU:  9/11, endU: 10/11 },
-    { type: 'exit',     range: [0.96, 1.00], startU: 10/11, endU: 11/11 },
+    { type: 'approach', range: [0.00, 0.04], startU:  0/11, endU:  1/11 },
+    { type: 'visit',    range: [0.04, 0.17], hub: 0, startU:  1/11, endU:  2/11 },
+    { type: 'transit',  range: [0.17, 0.24], from: 0, to: 1, startU:  2/11, endU:  3/11 },
+    { type: 'visit',    range: [0.24, 0.37], hub: 1, startU:  3/11, endU:  4/11 },
+    { type: 'transit',  range: [0.37, 0.44], from: 1, to: 2, startU:  4/11, endU:  5/11 },
+    { type: 'visit',    range: [0.44, 0.57], hub: 2, startU:  5/11, endU:  6/11 },
+    { type: 'transit',  range: [0.57, 0.64], from: 2, to: 3, startU:  6/11, endU:  7/11 },
+    { type: 'visit',    range: [0.64, 0.77], hub: 3, startU:  7/11, endU:  8/11 },
+    { type: 'transit',  range: [0.77, 0.84], from: 3, to: 4, startU:  8/11, endU:  9/11 },
+    { type: 'visit',    range: [0.84, 0.97], hub: 4, startU:  9/11, endU: 10/11 },
+    { type: 'exit',     range: [0.97, 1.00], startU: 10/11, endU: 11/11 },
   ];
+
+  // Per-hub wobble character — distinct frequencies/amplitudes per cluster
+  // so each visit has its own subtle "personality" instead of a single
+  // canned motion repeated five times. Atenuated to ~25% during transits
+  // so the in-between is calmer.
+  const HUB_WOBBLE = [
+    { fx: 0.00035, ax: 0.18, fy: 0.00050, ay: 0.12, fz: 0.00028, az: 0.08 }, // 0 lightBlue: floating wide
+    { fx: 0.00060, ax: 0.10, fy: 0.00040, ay: 0.20, fz: 0.00035, az: 0.06 }, // 1 green: breathing up/down
+    { fx: 0.00045, ax: 0.14, fy: 0.00045, ay: 0.14, fz: 0.00060, az: 0.18 }, // 2 purple: orbital, depth
+    { fx: 0.00080, ax: 0.08, fy: 0.00030, ay: 0.16, fz: 0.00050, az: 0.10 }, // 3 darkBlue: mechanical pulse
+    { fx: 0.00025, ax: 0.22, fy: 0.00035, ay: 0.18, fz: 0.00030, az: 0.12 }, // 4 orange: very wide calm
+  ];
+  function hubWobble(hubIdx, now, weight) {
+    const w = HUB_WOBBLE[hubIdx] || HUB_WOBBLE[0];
+    return {
+      dx: Math.sin(now * w.fx) * w.ax * weight,
+      dy: Math.cos(now * w.fy) * w.ay * weight,
+      dz: Math.sin(now * w.fz + 1.7) * w.az * weight,
+    };
+  }
 
   // PEEK_FRACTION: during a visit, the camera rotates this fraction of
   // the way toward the next hub by the time the visit ends. The transit
   // then completes (1 - PEEK_FRACTION) of the rotation. Splitting the
   // rotation across both phases means the angle change is gentle and
   // continuous, never concentrated in a forced "snap" during the transit.
-  const PEEK_FRACTION = 0.5;
+  const PEEK_FRACTION = 0.25;
 
   function nextLookTarget(hubIdx) {
     // hub i+1 if it exists, otherwise galaxy center (for the last visit
@@ -428,13 +449,19 @@
 
     // LookAt — continuous peek-ahead motion across visit→transit boundary
     let look;
+    // wobbleInfo: which hub character drives the wobble, and how strongly.
+    // visit: full weight on st.hub. transit: blend from→to. approach/exit:
+    // anchor to the nearest hub at a reduced weight.
+    let wobble;
     if (st.type === 'approach') {
       look = GALAXY_CENTER.clone().lerp(HUBS[0].center, eased);
+      wobble = { hubA: 0, hubB: 0, t: 0, weight: 0.35 * eased };
     } else if (st.type === 'visit') {
       // Rotate 0 → PEEK_FRACTION toward next destination across the visit
       const nextT = nextLookTarget(st.hub);
       const t = PEEK_FRACTION * eased;
       look = HUBS[st.hub].center.clone().lerp(nextT, t);
+      wobble = { hubA: st.hub, hubB: st.hub, t: 0, weight: 1.0 };
     } else if (st.type === 'transit') {
       // Continue from where the previous visit ended (PEEK_FRACTION),
       // ramp the rest of the way to the next hub
@@ -442,14 +469,16 @@
       const toC = HUBS[st.to].center;
       const t = PEEK_FRACTION + (1 - PEEK_FRACTION) * eased;
       look = fromC.clone().lerp(toC, t);
+      wobble = { hubA: st.from, hubB: st.to, t: eased, weight: 0.5 };
     } else { // exit
       // Continue from end of visit 4 (was peeking toward GALAXY_CENTER)
       const fromC = HUBS[HUBS.length - 1].center;
       const t = PEEK_FRACTION + (1 - PEEK_FRACTION) * eased;
       look = fromC.clone().lerp(GALAXY_CENTER, t);
+      wobble = { hubA: HUBS.length - 1, hubB: HUBS.length - 1, t: 0, weight: 0.35 * (1 - eased) };
     }
 
-    return { pos, look };
+    return { pos, look, wobble };
   }
 
   // ---------- Cards ----------
@@ -468,8 +497,11 @@
     for (const c of cards) {
       const [a, b] = c.visit.range;
       let vis = 0;
-      if (smoothProgress >= a - 0.02 && smoothProgress <= b + 0.02) {
-        const fadeIn = Math.min(1, (smoothProgress - a + 0.02) / 0.04);
+      // Card starts entering 0.06 before the visit-start (during the
+      // approaching transit) and ramps in fast (0.025 window) so it is
+      // ~fully visible the moment the camera lands on the cluster.
+      if (smoothProgress >= a - 0.06 && smoothProgress <= b + 0.02) {
+        const fadeIn = Math.min(1, (smoothProgress - a + 0.06) / 0.025);
         const fadeOut = Math.min(1, (b + 0.02 - smoothProgress) / 0.04);
         vis = Math.max(0, Math.min(1, Math.min(fadeIn, fadeOut)));
         vis = vis * vis * (3 - 2 * vis);
@@ -484,14 +516,18 @@
       const sy = (1 - (VEC.y + 1) * 0.5) * h;
       const cardW = c.el.offsetWidth || 460;
       const cardH = c.el.offsetHeight || 320;
+      // Attract the anchor point 35% of the way toward the screen center,
+      // and reduce the card-from-anchor offset (80→30). Cards still track
+      // their cluster but live in the centre band of the viewport.
+      const targetSx = sx + (w / 2 - sx) * 0.35;
+      const targetSy = (sy + h / 2) / 2;   // 50/50 mix node↔centre vertical
       let left, top;
       if (c.side === 'right') {
-        left = Math.max(24, Math.min(w - cardW - 24, sx + 80));
-        top  = Math.max(24, Math.min(h - cardH - 24, sy - cardH / 2));
+        left = Math.max(24, Math.min(w - cardW - 24, targetSx + 30));
       } else {
-        left = Math.max(24, Math.min(w - cardW - 24, sx - cardW - 80));
-        top  = Math.max(24, Math.min(h - cardH - 24, sy - cardH / 2));
+        left = Math.max(24, Math.min(w - cardW - 24, targetSx - cardW - 30));
       }
+      top = Math.max(24, Math.min(h - cardH - 24, targetSy - cardH / 2));
       c.el.style.left = `${left}px`;
       c.el.style.top  = `${top}px`;
       c.el.style.opacity = vis.toFixed(3);
@@ -542,10 +578,13 @@
       const mFadeEnd   = heroH * 0.42;
       mountainT = Math.max(0, Math.min(1, (scrolled - mFadeStart) / (mFadeEnd - mFadeStart)));
       // Galaxy fades in over a LONGER, overlapping window so the cross-fade
-      // feels smooth even though the mountain disappears faster.
-      const gFadeStart = heroH * 0.30;
-      const gFadeEnd   = heroH * 0.55;
-      galaxyT = Math.max(0, Math.min(1, (scrolled - gFadeStart) / (gFadeEnd - gFadeStart)));
+      // feels smooth even though the mountain disappears faster. Quintic
+      // easing (smoothStep5) gives a very gentle take-off — no perceptible
+      // "pop" when the cloud first becomes visible.
+      const gFadeStart = heroH * 0.18;
+      const gFadeEnd   = heroH * 0.72;
+      const gRaw       = Math.max(0, Math.min(1, (scrolled - gFadeStart) / (gFadeEnd - gFadeStart)));
+      galaxyT = smoothStep5(gRaw);
       globalCanvas.style.opacity = (1 - mountainT).toFixed(3);
       globalCanvas.style.pointerEvents = mountainT > 0.5 ? 'none' : '';
       if (mountainT > 0.05) document.body.style.backgroundColor = '#000814';
@@ -588,12 +627,18 @@
   function animate(now) {
     pointsMat.uniforms.uTime.value = (now - t0) / 1000;
 
-    smoothProgress += (rawProgress - smoothProgress) * 0.07;
+    // Lower smoothing factor (0.07 → 0.04) means the camera lags scroll
+    // ~25 frames instead of ~14, giving a noticeably more cinematic feel.
+    smoothProgress += (rawProgress - smoothProgress) * 0.04;
 
-    const { pos, look } = cameraAt(smoothProgress);
-    // Subtle per-frame wobble (reduced amplitude so visits feel still)
-    pos.x += Math.sin(now * 0.0004) * 0.15;
-    pos.y += Math.cos(now * 0.0003) * 0.10;
+    const { pos, look, wobble } = cameraAt(smoothProgress);
+    // Per-hub wobble — A and B blend during transits so the "character"
+    // changes continuously instead of snapping at station boundaries.
+    const wa = hubWobble(wobble.hubA, now, wobble.weight);
+    const wb = hubWobble(wobble.hubB, now, wobble.weight);
+    pos.x += wa.dx * (1 - wobble.t) + wb.dx * wobble.t;
+    pos.y += wa.dy * (1 - wobble.t) + wb.dy * wobble.t;
+    pos.z += wa.dz * (1 - wobble.t) + wb.dz * wobble.t;
     camera.position.copy(pos);
     camera.lookAt(look);
 
