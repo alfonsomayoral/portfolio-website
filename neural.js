@@ -505,22 +505,27 @@
     c.el.style.top  = '0px';
     c.el.style.willChange = 'transform, opacity';
   }
+  // Viewport dimensions also cached.  canvas.clientWidth/Height triggered
+  // reflow when read after style writes from the previous frame.
+  let cw = 0, ch = 0;
+  function measureViewport() {
+    cw = canvas.clientWidth  || window.innerWidth;
+    ch = canvas.clientHeight || window.innerHeight;
+  }
   function measureCards() {
     for (const c of cards) {
-      // Temporarily un-hide so layout returns real dimensions.  Reading
-      // offsetWidth on a 100%-hidden element returns 0 if it was display:none;
-      // visibility:hidden + opacity 0 keeps it laid-out, so we just read.
       const r = c.el.getBoundingClientRect();
       c.w = r.width  || c.w || 460;
       c.h = r.height || c.h || 320;
     }
   }
+  measureViewport();
   measureCards();
-  window.addEventListener('resize', measureCards);
+  window.addEventListener('resize', () => { measureViewport(); measureCards(); });
 
   const VEC = new THREE.Vector3();
   function positionCards() {
-    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const w = cw, h = ch;
     for (const c of cards) {
       const [a, b] = c.visit.range;
       let vis = 0;
@@ -596,15 +601,6 @@
   // galaxy canvas isn't visible (e.g. at the top of the page where
   // smoothProgress could still match a hub-0 visit range).
   let rawProgress = 0, smoothProgress = 0, neuralOpacity = 0;
-  const updateRaw = () => {
-    const rect = section.getBoundingClientRect();
-    const total = rect.height - window.innerHeight;
-    const passed = -rect.top;
-    rawProgress = Math.max(0, Math.min(1, total > 0 ? passed / total : 0));
-  };
-  updateRaw();
-  window.addEventListener('scroll', updateRaw, { passive: true });
-
   const heroSection = document.querySelector('section.hero, [data-chapter="Hero"]');
   const globalCanvas = document.getElementById('canvas-wrapper');
   const neuralWrap = document.getElementById('neural-canvas-wrap');
@@ -652,6 +648,10 @@
     const finalGalaxyOpacity = galaxyT * (1 - exitFade);
     neuralOpacity = finalGalaxyOpacity;
     const inside = galaxyT >= 0.5 && sectionRect.bottom >= 0;
+    // Compute rawProgress here so we reuse sectionRect instead of doing a
+    // second getBoundingClientRect in a separate scroll handler.
+    const total = sectionRect.height - innerH;
+    rawProgress = total > 0 ? Math.max(0, Math.min(1, -sectionRect.top / total)) : 0;
 
     // === BATCHED WRITES (only when values actually changed) ===
     if (heroSection && globalCanvas) {
