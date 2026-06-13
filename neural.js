@@ -506,6 +506,11 @@
         vis = Math.max(0, Math.min(1, Math.min(fadeIn, fadeOut)));
         vis = vis * vis * (3 - 2 * vis);
       }
+      // Gate by galaxy visibility: cards must never be visible when the
+      // galaxy canvas isn't (top of page, or after scrolling past the
+      // section bottom). Without this, hub 0 cards would show at the top
+      // because their visit range [0.04, 0.17] dilated by -0.06 includes 0.
+      vis *= neuralOpacity;
       if (vis <= 0.01) {
         c.el.style.opacity = '0';
         c.el.style.pointerEvents = 'none';
@@ -550,7 +555,11 @@
   }
 
   // ---------- Scroll ----------
-  let rawProgress = 0, smoothProgress = 0;
+  // neuralOpacity mirrors the canvas opacity (galaxyT * (1 - exitFade)).
+  // Cards multiply their fade by this so they never appear while the
+  // galaxy canvas isn't visible (e.g. at the top of the page where
+  // smoothProgress could still match a hub-0 visit range).
+  let rawProgress = 0, smoothProgress = 0, neuralOpacity = 0;
   const updateRaw = () => {
     const rect = section.getBoundingClientRect();
     const total = rect.height - window.innerHeight;
@@ -601,6 +610,7 @@
       exitFade = Math.min(1, overhang / (window.innerHeight * 0.5));
     }
     const finalGalaxyOpacity = galaxyT * (1 - exitFade);
+    neuralOpacity = finalGalaxyOpacity;
     if (neuralWrap) {
       neuralWrap.style.opacity = finalGalaxyOpacity.toFixed(3);
       // Also pull pointer-events when fully faded so footer links work
