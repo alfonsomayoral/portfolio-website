@@ -1,4 +1,23 @@
 {
+  "redirects": [
+    { "source": "/trading", "destination": "/work", "permanent": true },
+    { "source": "/trading/", "destination": "/work/", "permanent": true },
+    { "source": "/trading/:path*", "destination": "/work/:path*", "permanent": true },
+    { "source": "/capital", "destination": "/education", "permanent": true },
+    { "source": "/capital/", "destination": "/education/", "permanent": true },
+    { "source": "/capital/:path*", "destination": "/education/:path*", "permanent": true },
+    { "source": "/maritime", "destination": "/projects", "permanent": true },
+    { "source": "/maritime/", "destination": "/projects/", "permanent": true },
+    { "source": "/maritime/:path*", "destination": "/projects/:path*", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/work", "destination": "/trading/" },
+    { "source": "/work/", "destination": "/trading/" },
+    { "source": "/education", "destination": "/capital/" },
+    { "source": "/education/", "destination": "/capital/" },
+    { "source": "/projects", "destination": "/maritime/" },
+    { "source": "/projects/", "destination": "/maritime/" }
+  ],
   "headers": [
     {
       "source": "/_astro/(.*)",
