@@ -497,19 +497,18 @@
     for (const c of cards) {
       const [a, b] = c.visit.range;
       let vis = 0;
-      // Card starts entering 0.06 before the visit-start (during the
-      // approaching transit) and ramps in fast (0.025 window) so it is
-      // ~fully visible the moment the camera lands on the cluster.
-      if (smoothProgress >= a - 0.06 && smoothProgress <= b + 0.02) {
-        const fadeIn = Math.min(1, (smoothProgress - a + 0.06) / 0.025);
+      // Card fade-in starts EXACTLY at the visit-start (no anticipation)
+      // with a tight 0.02 ramp so it's ~fully visible within ~15% of the
+      // visit window. Anticipation would make hub 0 (visit-start 0.04)
+      // bleed into the approach phase and appear before the camera lands.
+      if (smoothProgress >= a && smoothProgress <= b + 0.02) {
+        const fadeIn = Math.min(1, (smoothProgress - a) / 0.02);
         const fadeOut = Math.min(1, (b + 0.02 - smoothProgress) / 0.04);
         vis = Math.max(0, Math.min(1, Math.min(fadeIn, fadeOut)));
         vis = vis * vis * (3 - 2 * vis);
       }
-      // Gate by galaxy visibility: cards must never be visible when the
-      // galaxy canvas isn't (top of page, or after scrolling past the
-      // section bottom). Without this, hub 0 cards would show at the top
-      // because their visit range [0.04, 0.17] dilated by -0.06 includes 0.
+      // Belt-and-braces: also gate by galaxy visibility so cards never
+      // appear when the canvas isn't on screen (top of page, past footer).
       vis *= neuralOpacity;
       if (vis <= 0.01) {
         c.el.style.opacity = '0';
